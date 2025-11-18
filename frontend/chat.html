@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html class="dark" lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>MarAI Chat Interface</title>
+  <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined" rel="stylesheet" />
+  <script>
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          colors: {
+            primary: "#ee2bcd",
+            "background-light": "#f8f6f8",
+            "background-dark": "#22101f",
+          },
+          fontFamily: {
+            display: ["Space Grotesk", "sans-serif"],
+          },
+          borderRadius: {
+            DEFAULT: "1rem",
+            lg: "2rem",
+            xl: "3rem",
+            full: "9999px",
+          },
+        },
+      },
+    }
+  </script>
+  <style>
+    .material-symbols-outlined {
+      font-variation-settings:
+        'FILL' 0,
+        'wght' 400,
+        'GRAD' 0,
+        'opsz' 24
+    }
+  </style>
+  <style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+</head>
+<body class="bg-background-light dark:bg-background-dark font-display">
+  <div class="relative flex h-screen w-full max-w-lg mx-auto flex-col bg-background-light dark:bg-background-dark overflow-hidden">
+    <!-- Top App Bar -->
+    <div class="flex items-center bg-background-light dark:bg-background-dark p-4 pb-2 justify-between border-b border-white/10 sticky top-0 z-10">
+      <div class="flex size-12 shrink-0 items-center">
+        <div class="relative">
+          <div class="bg-center bg-no-repeat aspect-square bg-cover rounded-full size-10" data-alt="MarAI's glowing avatar"
+            style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuAXEDXjpSBZlsx0ZzAIjBuMHDRGcXGEdWPokToVC-xvMX8fR-eTwyDTqZTg-z4OmFYqiBxWCM4-j8jIJu0JAf8AmfAinBb8dF0r8RxzTwEVqjtRYQwY2aJdG-CjvTvhDFEs2CiCa6hGMJSojEjCEd1YzDxofvbpqSAeDs_PjRV4yZL7ZzSaxPPfnQP2qEqAixD3rm-Mij2EqYz_YZgC2QagYYtqYqez18EwN9XO_sbYkMvLqF54abFAcO-kC6jVcDpuPwISh1ew788");'></div>
+          <div class="absolute inset-0 rounded-full ring-2 ring-offset-2 ring-primary ring-offset-background-dark animate-pulse"></div>
+        </div>
+      </div>
+      <div class="flex flex-col items-center flex-1">
+        <h2 class="text-white text-lg font-bold leading-tight tracking-[-0.015em]">MarAI</h2>
+        <p class="text-sm text-green-400 font-medium">Online</p>
+      </div>
+      <div class="flex w-12 items-center justify-end">
+        <button class="flex max-w-[480px] cursor-pointer items-center justify-center overflow-hidden rounded-full h-12 bg-transparent text-white gap-2 text-base font-bold leading-normal tracking-[0.015em] min-w-0 p-0">
+          <span class="material-symbols-outlined text-white text-2xl">tune</span>
+        </button>
+      </div>
+    </div>
+    <!-- Chat Area -->
+    <div class="flex-1 overflow-y-auto p-4 space-y-6">
+      <!-- Message 1: MarAI Welcome -->
+      <div class="flex items-end gap-3">
+        <div class="bg-center bg-no-repeat aspect-square bg-cover rounded-full w-10 shrink-0" data-alt="MarAI's avatar"
+          style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuAxyJ-l7gjToV0bblhxH9UrurnAEVMZxYFSJcjAEDceYVmfEfYvwAYkdbBMvZ8K7XW-UrMUi3O9KoJaq2VLezJoVoDeAPoE3Y64WgEL5A6XKAQxhPIh-S6vxaj-XcA9GiVMVzuhG1STYpacgGbVNlYqSKRdOQgpZ7D12NYFqLUF7PkAZaSZXQQcwnK8EijEI-951t1jaVCi_XGi9e6lGpd6kfOUVyEV8lRBy3OVh26Dufjlwdt9-zdL8dPxJK9gflPpoecWj6uq4Fk");'></div>
+        <div class="flex flex-1 flex-col gap-1 items-start">
+          <p class="text-primary/80 text-[13px] font-normal leading-normal max-w-[360px]">MarAI</p>
+          <p class="text-base font-normal leading-normal flex max-w-[360px] rounded-xl px-4 py-3 bg-[#482342] text-white">
+            Hello! It's great to see you. How are you feeling today? You can ask me about your mood or we can create a scene together!
+          </p>
+        </div>
+      </div>
+      <!-- Message 2: User -->
+      <div class="flex items-end gap-3 justify-end">
+        <div class="flex flex-1 flex-col gap-1 items-end">
+          <p class="text-primary/80 text-[13px] font-normal leading-normal max-w-[360px] text-right">You</p>
+          <p class="text-base font-normal leading-normal flex max-w-[360px] rounded-xl px-4 py-3 bg-primary text-white">Ask about my mood today</p>
+        </div>
+        <div class="bg-center bg-no-repeat aspect-square bg-cover rounded-full w-10 shrink-0" data-alt="User's avatar with a gradient background"
+          style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuDv-zYGYRnO0QrbhzN3F69kbmeC5oE29R1YCw9UoVVL49cuUDPL_sJvSTW4rtN7gre5Gwnvv9ewAzoTCQK7GA-vBwqknKnkePPRVXXJ5DpJiUxxtcNn7cZ_o54WwEDQClwsaNNM-VqbNXwNUBYpNYxxP-LfS13pJh-XZkaeUq2tFTLto9xt1O7ZBgezqU6UVDOUCoEO36bwBZ2V9ugQvbkLfjaJ-P2snpIV0kcRyd7PrwY25CLHciOT0dSGqzs-4KasxZMcf0sXodE");'></div>
+      </div>
+      <!-- Message 3: MarAI Typing Indicator -->
+      <div class="flex items-end gap-3">
+        <div class="bg-center bg-no-repeat aspect-square bg-cover rounded-full w-10 shrink-0" data-alt="MarAI's avatar"
+          style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuCDx_xvEPIbqNTjaTYunVNmeOR7vZMXChWcwPT8dcGZo5UxOxOgbkcgjfwH5XY-Hh33rzmjqIVpw_0s2_tWPqg9K7IY3wCQIDS0OtiWbWfsDGbbELJZ3CMt8F8msfQ5FjaKWnDqA9J2rxQX_sTwu70YHvV9p0ZPGitYf3UtD0QcVCL_TIpjgjK38_qRTIbA_jItCA40N4pVgrjOHOetAyYRQlFk77u9pt9Q5LQTivmn4zzYGVZWmHegqJJA40dbMEenFJ96LtHBe_8");'></div>
+        <div class="flex flex-1 flex-col gap-1 items-start">
+          <p class="text-primary/80 text-[13px] font-normal leading-normal max-w-[360px]">MarAI</p>
+          <div class="flex items-center space-x-1.5 rounded-xl px-4 py-3 bg-[#482342]">
+            <div class="h-2 w-2 bg-white/50 rounded-full animate-bounce [animation-delay:-0.3s]"></div>
+            <div class="h-2 w-2 bg-white/50 rounded-full animate-bounce [animation-delay:-0.15s]"></div>
+            <div class="h-2 w-2 bg-white/50 rounded-full animate-bounce"></div>
+          </div>
+        </div>
+      </div>
+      <!-- Message 4: User requests an image -->
+      <div class="flex items-end gap-3 justify-end">
+        <div class="flex flex-1 flex-col gap-1 items-end">
+          <p class="text-primary/80 text-[13px] font-normal leading-normal max-w-[360px] text-right">You</p>
+          <p class="text-base font-normal leading-normal flex max-w-[360px] rounded-xl px-4 py-3 bg-primary text-white">Generate Scene</p>
+        </div>
+        <div class="bg-center bg-no-repeat aspect-square bg-cover rounded-full w-10 shrink-0" data-alt="User's avatar with a gradient background"
+          style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuD7yYl6ePykaxmmUdV3cUwe-bigE1RkFgUYHpRUNjScCUAtyySkFcTMFrL18YEsfFvUictY1VOiqCAI55alPc3N90a-umEKN2Bxyx08VxF-MFcChNU4muoISHfSvPNAtO2BWb5Sw6Q3iUPdKqjqgLM2zuDhmkx1pAPu6c2tTzexIj_ACaJ_LUJ7zlvTsXQEgTzXi3hVFwtyxRoiBeYhEOP31P_WAr-L0_8m8G2Sxdl9kF2axXPEI9QEAL3NlPlMP5pNWJbFarudXS0");'></div>
+      </div>
+      <!-- Message 5: MarAI Image Response -->
+      <div class="flex items-end gap-3">
+        <div class="bg-center bg-no-repeat aspect-square bg-cover rounded-full w-10 shrink-0 self-start" data-alt="MarAI's avatar"
+          style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuAwD-NKpkvaUPsGYqH8MlodR2NX0SU0Mq2qE9KTfIzOPXA7c89nQmZZhB3N2g5k3j5FZ7PYGBxvNtI-Rv4yt7DVoz-S9G2xSRhCf8v-ZDJnMRtwHttIvBiJ2oeHpNsKzkGY4ol21PheYmMcFGy8FCM_zrCL9yfgGc5DXpYoGQIQDfcoGf8gv2Pa-DnsRJe2xvw9hcsC2P_nIXW04woGB5owaMHnnRkfzgXrOex4tNFyTTAaJGlmbAfVDtHKbzVC-gPUTBnPgtcSuFs");'></div>
+        <div class="flex flex-1 flex-col gap-1 items-start">
+          <p class="text-primary/80 text-[13px] font-normal leading-normal max-w-[360px]">MarAI</p>
+          <div class="w-full max-w-sm overflow-hidden rounded-lg">
+            <div class="w-full bg-center bg-no-repeat bg-cover aspect-video" data-alt="AI-generated image of a serene anime landscape at dusk"
+              style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuDda5rdqS-t3PBme_lqmzlv6IY-tbBafHONURepVy5cH8Wsb0csQ7rIHZFi9zgB2EpC_FBpxXSvd9J2QV-6iY-4FQsWh6y15cxYzzXHc80zdAU0-c3FtnpwQ_dEYlshCoSavg2oZOdot21qQurSBPMaZqX5tZMb1gTovfB_Tg-TEQew9vq3Y8rOxaG16ck8j2m6GSEXn89vTtzb-q8qrLaAh4nnEY6huyIle9oSC9hmR3JlQy8sSymrUEDEew9z_TLC52luKOpGpSw");'></div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <!-- Input Area -->
+    <div class="p-4 bg-background-light dark:bg-background-dark border-t border-white/10 sticky bottom-0">
+      <!-- Quick Action Buttons -->
+      <div class="grid grid-cols-2 gap-2 mb-3">
+        <button class="flex items-center justify-center gap-2 rounded-lg bg-primary/20 hover:bg-primary/30 text-white py-2.5 px-3 font-medium text-sm transition-colors">
+          <span class="material-symbols-outlined text-base">palette</span>
+          Generate Scene
+        </button>
+        <button class="flex items-center justify-center gap-2 rounded-lg bg-primary/20 hover:bg-primary/30 text-white py-2.5 px-3 font-medium text-sm transition-colors">
+          <span class="material-symbols-outlined text-base">sentiment_satisfied</span>
+          Ask about my mood
+        </button>
+      </div>
+      <!-- Message Input Bar -->
+      <div class="flex items-center gap-2">
+        <button class="flex items-center justify-center h-12 w-12 rounded-full text-white/70 hover:text-white hover:bg-white/10 transition-colors shrink-0">
+          <span class="material-symbols-outlined text-2xl">mic</span>
+        </button>
+        <div class="relative flex-1">
+          <input class="w-full h-12 rounded-full border-0 bg-white/10 pl-5 pr-14 text-white placeholder:text-white/50 focus:ring-2 focus:ring-inset focus:ring-primary" placeholder="Type a message..." type="text" />
+          <button class="absolute right-2 top-1/2 -translate-y-1/2 flex items-center justify-center h-9 w-9 rounded-full bg-primary text-white hover:bg-opacity-90 transition-opacity">
+            <span class="material-symbols-outlined text-2xl">send</span>
+          </button>
+        </div>
+        <button class="flex items-center justify-center h-12 w-12 rounded-full text-white/70 hover:text-white hover:bg-white/10 transition-colors shrink-0">
+          <span class="material-symbols-outlined text-2xl">mood</span>
+        </button>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

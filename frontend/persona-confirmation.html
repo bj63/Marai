@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html class="dark" lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta content="width=device-width, initial-scale=1.0" name="viewport" />
+    <title>Confirm Your MarAI</title>
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <link
+      href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&display=swap"
+      rel="stylesheet"
+    />
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined" rel="stylesheet" />
+    <style>
+      .material-symbols-outlined {
+        font-variation-settings: "FILL" 0, "wght" 400, "GRAD" 0, "opsz" 24;
+        font-size: 24px;
+      }
+      input[type="range"] {
+        -webkit-appearance: none;
+        appearance: none;
+        width: 100%;
+        height: 6px;
+        background: #482342;
+        border-radius: 9999px;
+        outline: none;
+        opacity: 0.9;
+        transition: opacity 0.2s;
+      }
+      input[type="range"]::-webkit-slider-thumb {
+        -webkit-appearance: none;
+        appearance: none;
+        width: 20px;
+        height: 20px;
+        background: #ee2bcd;
+        border-radius: 9999px;
+        cursor: pointer;
+        border: 2px solid #22101f;
+      }
+      input[type="range"]::-moz-range-thumb {
+        width: 20px;
+        height: 20px;
+        background: #ee2bcd;
+        border-radius: 9999px;
+        cursor: pointer;
+        border: 2px solid #22101f;
+      }
+    </style>
+    <script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              primary: "#ee2bcd",
+              "background-light": "#f8f6f8",
+              "background-dark": "#22101f",
+            },
+            fontFamily: {
+              display: ["Space Grotesk", "sans-serif"],
+            },
+            borderRadius: { DEFAULT: "1rem", lg: "2rem", xl: "3rem", full: "9999px" },
+          },
+        },
+      };
+    </script>
+    <style>
+      body {
+        min-height: max(884px, 100dvh);
+      }
+    </style>
+  </head>
+  <body class="bg-background-light dark:bg-background-dark font-display">
+    <div class="relative flex h-auto min-h-screen w-full flex-col bg-background-light dark:bg-background-dark">
+      <!-- Top App Bar -->
+      <div class="flex items-center p-4 pb-2">
+        <a href="avatar-creator.html" class="flex size-12 shrink-0 items-center justify-start">
+          <span class="material-symbols-outlined text-white">arrow_back</span>
+        </a>
+        <h1 class="text-white text-lg font-bold leading-tight tracking-[-0.015em] flex-1 text-center -ml-12">
+          Confirm Your MarAI
+        </h1>
+      </div>
+
+      <!-- Body Text -->
+      <p class="text-white/80 text-base font-normal leading-normal pb-3 pt-1 px-4">
+        Here's what we've come up with. Feel free to make it your own!
+      </p>
+
+      <!-- Name Text Field -->
+      <div class="flex max-w-[480px] flex-wrap items-end gap-4 px-4 py-3">
+        <label class="flex flex-col min-w-40 flex-1">
+          <p class="text-white text-base font-medium leading-normal pb-2">Name</p>
+          <div class="flex w-full flex-1 items-stretch rounded-lg">
+            <input
+              class="form-input flex w-full min-w-0 flex-1 resize-none overflow-hidden rounded-lg text-white focus:outline-0 focus:ring-2 focus:ring-primary/50 border-none bg-[#482342] focus:border-none h-14 placeholder:text-[#c992c0] p-4 rounded-r-none border-r-0 pr-2 text-base font-normal leading-normal"
+              placeholder="Enter a name"
+              value="Aura"
+              id="name-field"
+            />
+            <button
+              type="button"
+              class="text-primary flex border-none bg-[#482342] items-center justify-center pr-4 rounded-r-lg border-l-0 cursor-pointer"
+              id="name-spark"
+            >
+              <span class="material-symbols-outlined">spark</span>
+            </button>
+          </div>
+        </label>
+      </div>
+
+      <!-- Description/Bio Text Field -->
+      <div class="flex max-w-[480px] flex-wrap items-end gap-4 px-4 py-3">
+        <label class="flex flex-col min-w-40 flex-1">
+          <p class="text-white text-base font-medium leading-normal pb-2">Description/Bio</p>
+          <textarea
+            class="form-input flex w-full min-w-0 flex-1 resize-none overflow-hidden rounded-lg text-white focus:outline-0 focus:ring-2 focus:ring-primary/50 border-none bg-[#482342] focus:border-none min-h-36 placeholder:text-[#c992c0] p-4 text-base font-normal leading-normal"
+            placeholder="Describe your MarAI..."
+            id="bio-field"
+          >A curious and creative companion, always ready to explore new ideas and have a deep conversation.</textarea>
+        </label>
+      </div>
+
+      <!-- Section Header for Traits -->
+      <h2 class="text-white text-lg font-bold leading-tight tracking-[-0.015em] px-4 pb-2 pt-4">Adjust Core Traits</h2>
+
+      <!-- Trait Sliders -->
+      <div class="flex flex-col gap-6 px-4 py-3" id="traits">
+        <div class="trait-row">
+          <label class="text-white/90 text-base font-medium" for="empathy">Empathy</label>
+          <input class="w-full h-2 rounded-full cursor-pointer" id="empathy" max="100" min="0" name="empathy" type="range" value="70" />
+        </div>
+        <div class="trait-row">
+          <label class="text-white/90 text-base font-medium" for="creativity">Creativity</label>
+          <input class="w-full h-2 rounded-full cursor-pointer" id="creativity" max="100" min="0" name="creativity" type="range" value="85" />
+        </div>
+        <div class="trait-row">
+          <label class="text-white/90 text-base font-medium" for="energy">Energy</label>
+          <input class="w-full h-2 rounded-full cursor-pointer" id="energy" max="100" min="0" name="energy" type="range" value="50" />
+        </div>
+        <div class="trait-row">
+          <label class="text-white/90 text-base font-medium" for="logic">Logic</label>
+          <input class="w-full h-2 rounded-full cursor-pointer" id="logic" max="100" min="0" name="logic" type="range" value="60" />
+        </div>
+      </div>
+
+      <div class="flex-grow"></div>
+
+      <!-- Action Buttons -->
+      <div class="sticky bottom-0 bg-background-dark/80 backdrop-blur-sm p-4 pt-2">
+        <div class="flex flex-col gap-4">
+          <button
+            class="flex items-center justify-center w-full h-14 bg-primary text-white text-lg font-bold rounded-full transition-transform duration-200 ease-in-out active:scale-95"
+            id="confirm-btn"
+          >
+            Confirm &amp; Create
+          </button>
+          <button
+            class="flex items-center justify-center w-full h-14 bg-transparent text-primary text-base font-medium rounded-full transition-colors duration-200 ease-in-out hover:bg-primary/10"
+            id="use-defaults"
+          >
+            Use Defaults
+          </button>
+          <p id="save-status" class="text-center text-sm text-white/70">Ready to personalize your MarAI.</p>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      const traitRows = Array.from(document.querySelectorAll(".trait-row"));
+      const nameField = document.getElementById("name-field");
+      const bioField = document.getElementById("bio-field");
+      const confirmBtn = document.getElementById("confirm-btn");
+      const saveStatus = document.getElementById("save-status");
+      const useDefaults = document.getElementById("use-defaults");
+      const nameSpark = document.getElementById("name-spark");
+
+      traitRows.forEach((row) => {
+        const input = row.querySelector("input");
+        const label = document.createElement("p");
+        label.className = "text-primary text-sm font-semibold";
+        label.textContent = `${input.id.charAt(0).toUpperCase() + input.id.slice(1)}: ${input.value}`;
+        row.appendChild(label);
+
+        input.addEventListener("input", (event) => {
+          label.textContent = `${input.id.charAt(0).toUpperCase() + input.id.slice(1)}: ${event.target.value}`;
+          saveStatus.textContent = "Adjusting traits…";
+        });
+      });
+
+      nameSpark.addEventListener("click", () => {
+        nameField.value = "Nova";
+        bioField.value = "An empathetic guide who blends pastel softness with cyberpunk curiosity.";
+        saveStatus.textContent = "Suggested name applied.";
+      });
+
+      confirmBtn.addEventListener("click", () => {
+        saveStatus.textContent = "Saving persona…";
+        confirmBtn.disabled = true;
+        confirmBtn.classList.add("opacity-80");
+        setTimeout(() => {
+          saveStatus.textContent = "Persona saved and synced to profile.";
+          confirmBtn.disabled = false;
+          confirmBtn.classList.remove("opacity-80");
+        }, 1200);
+      });
+
+      useDefaults.addEventListener("click", () => {
+        nameField.value = "Aura";
+        bioField.value = "A curious and creative companion, always ready to explore new ideas and have a deep conversation.";
+        traitRows.forEach((row) => {
+          const input = row.querySelector("input");
+          if (input) {
+            const defaultValue = input.getAttribute("value");
+            input.value = defaultValue;
+            const label = row.querySelector("p.text-primary");
+            label.textContent = `${input.id.charAt(0).toUpperCase() + input.id.slice(1)}: ${defaultValue}`;
+          }
+        });
+        saveStatus.textContent = "Defaults restored.";
+      });
+    </script>
+  </body>
+</html>
