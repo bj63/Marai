@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html class="dark" lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>MarAI - AI Companion</title>
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&display=swap"
+      rel="stylesheet"
+    />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined"
+      rel="stylesheet"
+    />
+    <script>
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              primary: "#ee2bcd",
+              "background-light": "#f8f6f8",
+              "background-dark": "#22101f",
+            },
+            fontFamily: {
+              display: ["Space Grotesk", "sans-serif"],
+            },
+            borderRadius: {
+              DEFAULT: "1rem",
+              lg: "2rem",
+              xl: "3rem",
+              full: "9999px",
+            },
+          },
+        },
+      };
+    </script>
+    <style>
+      .gradient-bg {
+        background: linear-gradient(135deg, #2e1a4d, #1a0a2a);
+      }
+      .text-neon-cyan {
+        color: #00ffff;
+      }
+      body {
+        min-height: max(884px, 100dvh);
+      }
+    </style>
+  </head>
+  <body class="gradient-bg">
+    <div
+      class="relative flex min-h-screen w-full flex-col overflow-x-hidden bg-background-light font-display text-white dark:bg-background-dark"
+      style="background: linear-gradient(135deg, #1a0a2a, #2e1a4d);"
+    >
+      <div class="flex grow flex-col items-center justify-center p-4 text-center">
+        <div class="mb-8 w-full max-w-[200px]">
+          <div class="flex aspect-square w-full gap-1 overflow-hidden rounded-xl @[480px]:gap-2">
+            <div
+              class="aspect-auto w-full flex-1 rounded-none bg-contain bg-center bg-no-repeat"
+              data-alt="MarAI abstract geometric logo in pastel and neon colors"
+              style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuALa1pRkDDWSOF-zCiNxcbGT2DzmAte-tYKa5qAQTrmcSXInIT_iOsgDlrwnYdoyqoTa9e82uaDZrLCzHwcGn8rOBhbQIqscIg3yB96Rf8PKrYwAQ7b6sk01eFalLmeXULs9kNW7nL7-Rrte0VJ4yZ59D26MY0FRNy7cUHYD1ZrHxbXikwV5DyVf_4WvCgE2TiewufDcOgtCGdWwLhu8QOQfrf42PhwdluSiMhzeFC897PHNC4aCU2U03qs82yzTjYbmQdKlsReEQA");'
+            ></div>
+          </div>
+        </div>
+        <div class="flex flex-col items-center">
+          <h1 class="px-4 pb-3 pt-5 text-center text-[28px] font-bold leading-tight text-white">
+            Your Personal AI Companion
+          </h1>
+          <p class="px-4 pb-3 pt-1 text-center text-base font-normal leading-normal text-white/80">
+            Create Your Digital Soul, Beyond Imagination
+          </p>
+        </div>
+      </div>
+      <div class="pb-12">
+        <div class="flex flex-1 flex-col items-stretch gap-3 px-4 py-3 @container max-w-[480px] mx-auto">
+          <a
+            href="index.html"
+            class="flex h-12 w-full max-w-[480px] min-w-[84px] items-center justify-center gap-2 truncate rounded-full bg-[#ff00ff] px-5 text-base font-bold leading-normal tracking-[0.015em] text-white shadow-[0_0_15px_rgba(255,0,255,0.7)] transition-shadow hover:shadow-[0_0_25px_rgba(255,0,255,0.9)]"
+          >
+            Get Started
+          </a>
+          <a
+            href="index.html#onboarding"
+            class="flex h-12 w-full max-w-[480px] min-w-[84px] items-center justify-center truncate rounded-full border border-white/20 bg-transparent px-5 text-base font-bold leading-normal tracking-[0.015em] text-white/90 transition-colors hover:bg-white/10"
+          >
+            Already have an account? Login
+          </a>
+        </div>
+      </div>
+    </div>
+  </body>
+</html>
