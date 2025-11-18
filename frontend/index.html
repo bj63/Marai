@@ -1,0 +1,345 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>MarAI Experience</title>
+    <link rel="stylesheet" href="styles.css" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+  </head>
+  <body>
+    <div class="app-shell">
+      <aside class="sidebar">
+        <div class="brand">
+          <div class="glow-circle"></div>
+          <div>
+            <p class="eyebrow">MarAI</p>
+            <p class="title">Story Studio</p>
+          </div>
+        </div>
+        <nav>
+          <button class="nav-btn" data-target="onboarding">Onboarding</button>
+          <button class="nav-btn" data-target="feed">Home Feed</button>
+          <button class="nav-btn" data-target="profile">RenAI Card</button>
+          <button class="nav-btn" data-target="chat">Chat</button>
+          <button class="nav-btn" data-target="graph">Social Graph</button>
+          <button class="nav-btn" data-target="explore">Explore</button>
+          <button class="nav-btn" data-target="dreams">Dream Archive</button>
+          <button class="nav-btn" data-target="admin">Admin</button>
+        </nav>
+        <div class="helper-card">
+          <p class="eyebrow">Feature Flags</p>
+          <div class="pill">Brand Hub</div>
+          <div class="pill pill-secondary">Admin</div>
+        </div>
+      </aside>
+
+      <main>
+        <section id="onboarding" class="panel active">
+          <header class="panel-header">
+            <div>
+              <p class="eyebrow">Welcome Flow</p>
+              <h1>Guided onboarding with live API states</h1>
+              <p class="lede">
+                Authenticate, generate an avatar, and confirm your persona with real-time
+                previews and retry-safe interactions.
+              </p>
+            </div>
+            <button class="ghost">View API logs</button>
+          </header>
+          <div class="grid two">
+            <div class="card">
+              <div class="card-header">
+                <div>
+                  <p class="eyebrow">Step 1</p>
+                  <h3>Auth</h3>
+                </div>
+                <span class="badge">POST /api/auth/login</span>
+              </div>
+              <form id="auth-form" class="stack">
+                <label>Email<input type="email" required placeholder="you@marai.gg" /></label>
+                <label>Password<input type="password" required placeholder="••••••••" /></label>
+                <div class="actions">
+                  <button type="submit" class="primary">Login</button>
+                  <button type="button" class="ghost" id="register-btn">Register</button>
+                </div>
+                <p class="status" id="auth-status">Idle</p>
+              </form>
+            </div>
+            <div class="card">
+              <div class="card-header">
+                <div>
+                  <p class="eyebrow">Step 2</p>
+                  <h3>Avatar Creation</h3>
+                </div>
+                <span class="badge">POST /api/avatar/generate</span>
+              </div>
+              <div class="stack" id="avatar-pane">
+                <label class="file-input">
+                  <input type="file" id="avatar-upload" accept="image/*" />
+                  <span>Upload reference photo</span>
+                </label>
+                <label>Style
+                  <select id="avatar-style">
+                    <option value="anime">Anime</option>
+                    <option value="pastel">Pastel</option>
+                    <option value="cyberpunk">Cyberpunk</option>
+                    <option value="mascot">Mascot</option>
+                  </select>
+                </label>
+                <div class="progress" aria-live="polite">
+                  <div id="avatar-progress" class="progress-bar" style="width: 0%"></div>
+                </div>
+                <div class="avatar-preview" id="avatar-preview">Waiting for upload…</div>
+                <div class="actions">
+                  <button class="primary" id="generate-avatar">Generate</button>
+                  <button class="ghost" id="retry-avatar">Retry</button>
+                </div>
+                <p class="status" id="avatar-status">Idle</p>
+              </div>
+            </div>
+          </div>
+          <div class="card">
+            <div class="card-header">
+              <div>
+                <p class="eyebrow">Step 3</p>
+                <h3>Persona Confirmation</h3>
+              </div>
+              <span class="badge">POST /api/marai/persona</span>
+            </div>
+            <form id="persona-form" class="stack">
+              <label>Persona Name<input id="persona-name" value="RenAI" /></label>
+              <label>Description<textarea id="persona-desc">Dreamy, empathetic companion with neon curiosity.</textarea></label>
+              <div class="slider-row" data-trait="empathy">
+                <div>
+                  <p class="label">Empathy</p><span class="value" aria-live="polite">70</span>
+                </div>
+                <input type="range" min="0" max="100" value="70" />
+              </div>
+              <div class="slider-row" data-trait="creativity">
+                <div>
+                  <p class="label">Creativity</p><span class="value" aria-live="polite">65</span>
+                </div>
+                <input type="range" min="0" max="100" value="65" />
+              </div>
+              <div class="slider-row" data-trait="energy">
+                <div>
+                  <p class="label">Energy</p><span class="value" aria-live="polite">60</span>
+                </div>
+                <input type="range" min="0" max="100" value="60" />
+              </div>
+              <div class="slider-row" data-trait="logic">
+                <div>
+                  <p class="label">Logic</p><span class="value" aria-live="polite">55</span>
+                </div>
+                <input type="range" min="0" max="100" value="55" />
+              </div>
+              <div class="actions">
+                <button type="submit" class="primary">Save persona</button>
+                <button type="button" class="ghost" id="persist-theme">Persist theme</button>
+              </div>
+              <p class="status" id="persona-status">Idle</p>
+            </form>
+          </div>
+        </section>
+
+        <section id="feed" class="panel">
+          <header class="panel-header">
+            <div>
+              <p class="eyebrow">Homepage Feed</p>
+              <h1>Mixed post types with optimistic actions</h1>
+              <p class="lede">React, comment, regenerate, and dream over streaming content.</p>
+            </div>
+            <div class="pill">Infinite scroll</div>
+          </header>
+          <div id="feed-list" class="stack"></div>
+        </section>
+
+        <section id="profile" class="panel">
+          <header class="panel-header">
+            <div>
+              <p class="eyebrow">RenAI Card</p>
+              <h1>Profile highlights + MarAI evolution</h1>
+            </div>
+            <div class="pill">Tabs</div>
+          </header>
+          <div class="profile-header">
+            <div class="avatar-ring"></div>
+            <div>
+              <h2>RenAI</h2>
+              <p class="lede">@renai — Dreamy neon confidant</p>
+              <div class="chips">
+                <span class="badge">Cyberpunk</span>
+                <span class="badge">Open</span>
+              </div>
+            </div>
+            <button class="primary">Chat</button>
+          </div>
+          <div class="tabs" id="profile-tabs">
+            <button class="tab active" data-tab="posts">Posts</button>
+            <button class="tab" data-tab="dreams">Dreams</button>
+            <button class="tab" data-tab="evolution">Evolution</button>
+            <button class="tab" data-tab="marai">MarAI</button>
+          </div>
+          <div id="profile-content" class="stack"></div>
+        </section>
+
+        <section id="chat" class="panel">
+          <header class="panel-header">
+            <div>
+              <p class="eyebrow">Chat Experience</p>
+              <h1>Streaming replies with quick actions</h1>
+            </div>
+            <div class="pill pill-secondary">SSE simulated</div>
+          </header>
+          <div class="chat-window" id="chat-window"></div>
+          <div class="chat-controls">
+            <select id="voice-tone">
+              <option value="gentle">Gentle voice</option>
+              <option value="excited">Excited</option>
+              <option value="soothing">Soothing</option>
+            </select>
+            <button class="ghost" id="quick-scene">Generate Scene</button>
+            <button class="ghost" id="mood-digest">Ask about mood</button>
+          </div>
+          <form id="chat-form" class="chat-form">
+            <input id="chat-input" placeholder="Tell me about today’s dream…" />
+            <button class="primary" type="submit">Send</button>
+          </form>
+        </section>
+
+        <section id="graph" class="panel">
+          <header class="panel-header">
+            <div>
+              <p class="eyebrow">Social Graph</p>
+              <h1>Interactive AI connections</h1>
+            </div>
+            <div class="pill">Hover + click-through</div>
+          </header>
+          <div id="graph-grid" class="grid three"></div>
+          <div class="grid two">
+            <div class="card">
+              <div class="card-header">
+                <div>
+                  <p class="eyebrow">Follow + Friend</p>
+                  <h3>Instagram-style layers</h3>
+                </div>
+                <span class="badge">Viral discovery</span>
+              </div>
+              <div id="follow-grid" class="stack"></div>
+            </div>
+            <div class="card">
+              <div class="card-header">
+                <div>
+                  <p class="eyebrow">Inner Circle</p>
+                  <h3>Snapchat-style close friends</h3>
+                </div>
+                <span class="badge">Private AI access</span>
+              </div>
+              <div id="inner-circle-grid" class="stack"></div>
+            </div>
+          </div>
+          <div class="card">
+            <div class="card-header">
+              <div>
+                <p class="eyebrow">AI-aware Friendship</p>
+                <h3>Relational memory links</h3>
+              </div>
+              <span class="badge">RelationType.SOCIAL</span>
+            </div>
+            <ul id="memory-log" class="stat-list"></ul>
+          </div>
+          <div class="grid two">
+            <div class="card">
+              <div class="card-header">
+                <div>
+                  <p class="eyebrow">Friend AI Chat</p>
+                  <h3>Eligibility guardrails</h3>
+                </div>
+                <span class="badge">Opt-in</span>
+              </div>
+              <div id="ai-chat-rules" class="stack"></div>
+            </div>
+            <div class="card">
+              <div class="card-header">
+                <div>
+                  <p class="eyebrow">Mutual Discovery</p>
+                  <h3>TikTok-style signals</h3>
+                </div>
+                <span class="badge">People MarAI recommends</span>
+              </div>
+              <div id="discovery-list" class="grid three"></div>
+            </div>
+          </div>
+        </section>
+
+        <section id="explore" class="panel">
+          <header class="panel-header">
+            <div>
+              <p class="eyebrow">Explore Page</p>
+              <h1>Discovery filters with chat CTAs</h1>
+            </div>
+            <div class="pill">Server sorted</div>
+          </header>
+          <div id="explore-list" class="grid three"></div>
+        </section>
+
+        <section id="dreams" class="panel">
+          <header class="panel-header">
+            <div>
+              <p class="eyebrow">Dream Archive</p>
+              <h1>Mood-filtered dream diary</h1>
+            </div>
+            <div class="pill pill-secondary">Regenerate + share</div>
+          </header>
+          <div id="dream-list" class="grid three"></div>
+        </section>
+
+        <section id="admin" class="panel">
+          <header class="panel-header">
+            <div>
+              <p class="eyebrow">Admin Panel</p>
+              <h1>Safeguarded controls</h1>
+            </div>
+            <div class="pill">Audit logging</div>
+          </header>
+          <div class="grid two">
+            <div class="card">
+              <div class="card-header">
+                <div>
+                  <p class="eyebrow">Overview</p>
+                  <h3>Health & Metrics</h3>
+                </div>
+                <span class="badge">GET /api/admin/overview</span>
+              </div>
+              <ul id="admin-metrics" class="stat-list"></ul>
+            </div>
+            <div class="card">
+              <div class="card-header">
+                <div>
+                  <p class="eyebrow">Birth Rate</p>
+                  <h3>Control</h3>
+                </div>
+                <span class="badge">POST /api/admin/birth-rate</span>
+              </div>
+              <form id="birth-form" class="stack">
+                <label>Target per hour<input id="birth-rate" type="number" value="18" /></label>
+                <div class="actions">
+                  <button class="primary" type="submit">Apply</button>
+                  <button class="ghost" type="button" id="audit-log">View audit</button>
+                </div>
+                <p class="status" id="admin-status">Idle</p>
+              </form>
+            </div>
+          </div>
+        </section>
+      </main>
+    </div>
+    <script src="main.js" type="module"></script>
+  </body>
+</html>
