@@ -4,6 +4,9 @@ This repository contains a static, dependency-free prototype for the MarAI exper
 
 ## Running locally
 
+Create a `.env` file (see `.env.example`) so the prototype can authenticate against a live API. The UI reads
+`NEXT_PUBLIC_API_BASE_URL` and `NEXT_PUBLIC_API_KEY` for all `/api/auth/*`, `/api/avatar/*`, feed, chat, and graph calls.
+
 No build step is required.
 
 - Open `frontend/landing.html` for the branded splash hero that links into the prototype.
