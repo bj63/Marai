@@ -4,10 +4,9 @@ const cacheIndicator = document.getElementById('cache-indicator');
 const chatCta = document.getElementById('chat-cta');
 
 const username = new URLSearchParams(window.location.search).get('username') || 'nova';
-const cacheKey = `marai.profile.cache.${username}`;
-const cacheTtlMs = 5 * 60 * 1000;
 
 let profileState = null;
+let disconnectProfileVirtualizer = null;
 
 init();
 
@@ -29,18 +28,11 @@ function init() {
 }
 
 function loadProfileFromCache() {
-  const cached = localStorage.getItem(cacheKey);
-  if (!cached) return;
-  try {
-    const parsed = JSON.parse(cached);
-    if (Date.now() - parsed.timestamp < cacheTtlMs) {
-      cacheIndicator.textContent = `Cached ${(Date.now() - parsed.timestamp) / 1000}s ago`;
-      profileState = parsed.data;
-      renderProfile(parsed.data, true);
-    }
-  } catch (error) {
-    console.error('Failed to parse cache', error);
-  }
+  const cached = loadProfileCache(username);
+  if (!cached?.data) return;
+  cacheIndicator.textContent = `Cached ${(Date.now() - cached.timestamp) / 1000}s ago`;
+  profileState = cached.data;
+  renderProfile(cached.data, true);
 }
 
 async function fetchAndRenderProfile() {
@@ -49,7 +41,7 @@ async function fetchAndRenderProfile() {
     profileState = data;
     renderProfile(data, false);
     cacheIndicator.textContent = 'Fresh';
-    localStorage.setItem(cacheKey, JSON.stringify({ timestamp: Date.now(), data }));
+    persistProfileCache(username, data);
   } catch (error) {
     console.error(error);
     showToast(error.message || 'Unable to load profile', 'error');
@@ -216,21 +208,27 @@ function renderList(items, target, emptyText) {
     target.innerHTML = `<p class="text-sm text-white/60">${emptyText}</p>`;
     return;
   }
-  items.forEach((item) => {
-    const card = document.createElement('article');
-    card.className = 'rounded-xl border border-white/10 bg-white/5 p-3';
-    card.innerHTML = `
-      <div class="flex items-center justify-between gap-3">
-        <div>
-          <p class="text-xs uppercase tracking-[0.18em] text-white/60">${item.type || 'Entry'}</p>
-          <h4 class="font-display text-lg font-semibold text-white">${item.title || item.caption}</h4>
+  disconnectProfileVirtualizer?.();
+  disconnectProfileVirtualizer = virtualizeList(
+    target,
+    items,
+    (item) => {
+      const card = document.createElement('article');
+      card.className = 'rounded-xl border border-white/10 bg-white/5 p-3';
+      card.innerHTML = `
+        <div class="flex items-center justify-between gap-3">
+          <div>
+            <p class="text-xs uppercase tracking-[0.18em] text-white/60">${item.type || 'Entry'}</p>
+            <h4 class="font-display text-lg font-semibold text-white">${item.title || item.caption}</h4>
+          </div>
+          <span class="rounded-full bg-white/5 px-3 py-1 text-xs text-white/70">${item.timestamp || 'Just now'}</span>
         </div>
-        <span class="rounded-full bg-white/5 px-3 py-1 text-xs text-white/70">${item.timestamp || 'Just now'}</span>
-      </div>
-      <p class="mt-2 text-sm text-white/80">${item.text || item.summary || ''}</p>
-    `;
-    target.appendChild(card);
-  });
+        <p class="mt-2 text-sm text-white/80">${item.text || item.summary || ''}</p>
+      `;
+      return card;
+    },
+    { batchSize: 6 }
+  );
 }
 
 function renderEvolution(evolution) {
