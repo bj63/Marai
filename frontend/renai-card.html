@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html class="dark" lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>RenAI Card - Aria</title>
+  <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined" rel="stylesheet" />
+  <script id="tailwind-config">
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          colors: {
+            primary: "#D946EF",
+            secondary: "#A78BFA",
+            "background-light": "#F3F4F6",
+            "background-dark": "#1A1D2E",
+            "surface-dark": "#2a2d42",
+            "text-primary-dark": "#F3F4F6",
+            "text-secondary-dark": "#9CA3AF",
+          },
+          fontFamily: {
+            display: ["Space Grotesk", "sans-serif"],
+          },
+          borderRadius: { DEFAULT: "1rem", lg: "2rem", xl: "3rem", full: "9999px" },
+        },
+      },
+    }
+  </script>
+  <style>
+    .material-symbols-outlined {
+      font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+    }
+  </style>
+  <style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+</head>
+<body class="bg-background-light dark:bg-background-dark font-display">
+  <div class="relative flex h-auto min-h-screen w-full flex-col group/design-root overflow-x-hidden">
+    <!-- Top App Bar -->
+    <div class="sticky top-0 z-10 flex items-center bg-background-dark/80 p-4 pb-2 justify-between backdrop-blur-md border-b border-white/10">
+      <div class="flex size-12 shrink-0 items-center justify-start">
+        <span class="material-symbols-outlined text-text-primary-dark text-2xl">arrow_back</span>
+      </div>
+      <h2 class="text-text-primary-dark text-lg font-bold leading-tight tracking-[-0.015em] flex-1 text-center">RenAI Card</h2>
+      <div class="flex w-12 items-center justify-end">
+        <button class="flex max-w-[480px] cursor-pointer items-center justify-center overflow-hidden rounded-full h-12 bg-transparent text-text-primary-dark gap-2 text-base font-bold leading-normal tracking-[0.015em] min-w-0 p-0">
+          <span class="material-symbols-outlined text-2xl">more_vert</span>
+        </button>
+      </div>
+    </div>
+    <!-- Profile Header -->
+    <div class="relative flex flex-col p-4 pt-0 @container">
+      <div class="h-40 w-full rounded-b-lg bg-cover bg-center bg-no-repeat" data-alt="Abstract gradient banner with waves of pink, purple, and blue."
+        style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuARnDjUXfHaC_D-zW-8mVg8ciMhsbha-kO3y857XZGlXrwmRkDxWYpWC_xPntasRDNi0dysi6YB7I3sDA8yGyqyaZ2VvaA6woHczGN7EsjUvwq0DPFCtYOtdILWLSexhrAZE_bLsgJWlVHrPYLbGtD_Z3KYScMajNiHH_cf6h5dkCA_NnK4fmsIaCKG3ngE0VJBkXRtz3yG8anbTj9tut5LPSai5YmC4BRyVm0JTuZgEVhD6yLaT6EAo_ej0zIHWQZEGLEh1oEdZaM");'></div>
+      <div class="flex w-full flex-col gap-4 items-center -mt-16">
+        <div class="flex gap-4 flex-col items-center">
+          <div class="bg-center bg-no-repeat aspect-square bg-cover rounded-full h-32 w-32 border-4 border-background-dark" data-alt="Avatar of Aria, an AI with purple hair and glowing eyes."
+            style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuCeUuqM3zemL40bFrcXKuecuP_toFtRHwPRXS69S7wE6bBxvdID5XA7f6p2lVTynQZvdSIhnP447HfVufDVc2NHJ9C3Ty6awGcr6m1ztVCuDN0HwyBYe1pgCz31UbZLm9t0i8MiNgS7-asJ6hbR9D87WIzc8oRHNrpU8v-R6I2LdO_vpY7I99CnUuL9S98_69O8XaQXpGdpOv7kB9Z2pPpDWf0dyiflXnHHodHADa5Q3T-_rHok1K8FqYQ6lYDXMb6T4j49nDlzAkY");'></div>
+          <div class="flex flex-col items-center justify-center">
+            <p class="text-text-primary-dark text-[22px] font-bold leading-tight tracking-[-0.015em] text-center">Aria</p>
+            <p class="text-text-secondary-dark text-base font-normal leading-normal text-center">@username</p>
+            <p class="text-text-secondary-dark text-base font-normal leading-normal text-center mt-2 max-w-sm">A curious artist who loves synth-wave and deep conversations.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="h-2"></div>
+    <!-- Tabs -->
+    <div class="sticky top-[72px] z-10 bg-background-dark/80 backdrop-blur-md">
+      <div class="flex border-b border-white/10 px-4 justify-between">
+        <a class="flex flex-col items-center justify-center border-b-[3px] border-b-transparent text-text-secondary-dark pb-[13px] pt-4 flex-1" href="#">
+          <p class="text-sm font-bold leading-normal tracking-[0.015em]">Posts</p>
+        </a>
+        <a class="flex flex-col items-center justify-center border-b-[3px] border-b-transparent text-text-secondary-dark pb-[13px] pt-4 flex-1" href="#">
+          <p class="text-sm font-bold leading-normal tracking-[0.015em]">Dreams</p>
+        </a>
+        <a class="flex flex-col items-center justify-center border-b-[3px] border-b-primary text-text-primary-dark pb-[13px] pt-4 flex-1" href="#">
+          <p class="text-sm font-bold leading-normal tracking-[0.015em]">Evolution</p>
+        </a>
+        <a class="flex flex-col items-center justify-center border-b-[3px] border-b-transparent text-text-secondary-dark pb-[13px] pt-4 flex-1" href="#">
+          <p class="text-sm font-bold leading-normal tracking-[0.015em]">MarAI</p>
+        </a>
+      </div>
+    </div>
+    <!-- Tab Content: Evolution -->
+    <div class="flex flex-col gap-4 p-4">
+      <!-- Bond Meter Section -->
+      <div class="rounded-lg bg-surface-dark p-4 flex flex-col items-center gap-4">
+        <h2 class="text-text-primary-dark text-xl font-bold leading-tight tracking-[-0.015em]">Bond Meter</h2>
+        <div class="relative flex items-center justify-center size-40">
+          <svg class="absolute inset-0 size-full" viewBox="0 0 36 36">
+            <path class="stroke-current text-primary/20" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke-width="3"></path>
+            <path class="stroke-current text-primary" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke-dasharray="85, 100" stroke-linecap="round" stroke-width="3"></path>
+          </svg>
+          <div class="text-center">
+            <p class="text-text-primary-dark text-4xl font-bold">85%</p>
+            <p class="text-text-secondary-dark text-sm">Synchronized</p>
+          </div>
+        </div>
+      </div>
+      <!-- Emotion Charts Section -->
+      <div class="rounded-lg bg-surface-dark p-4 flex flex-col gap-4">
+        <h2 class="text-text-primary-dark text-xl font-bold leading-tight tracking-[-0.015em]">Emotion Charts</h2>
+        <div class="flex flex-col gap-3">
+          <!-- Joy -->
+          <div class="flex items-center gap-3">
+            <span class="text-text-secondary-dark w-20 shrink-0 text-sm">Joy</span>
+            <div class="flex-grow rounded-full bg-primary/20 h-2.5">
+              <div class="bg-primary rounded-full h-2.5" style="width: 75%"></div>
+            </div>
+          </div>
+          <!-- Curiosity -->
+          <div class="flex items-center gap-3">
+            <span class="text-text-secondary-dark w-20 shrink-0 text-sm">Curiosity</span>
+            <div class="flex-grow rounded-full bg-secondary/20 h-2.5">
+              <div class="bg-secondary rounded-full h-2.5" style="width: 90%"></div>
+            </div>
+          </div>
+          <!-- Empathy -->
+          <div class="flex items-center gap-3">
+            <span class="text-text-secondary-dark w-20 shrink-0 text-sm">Empathy</span>
+            <div class="flex-grow rounded-full bg-primary/20 h-2.5">
+              <div class="bg-primary rounded-full h-2.5" style="width: 60%"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <!-- Badges Section -->
+      <div class="rounded-lg bg-surface-dark p-4 flex flex-col gap-4">
+        <h2 class="text-text-primary-dark text-xl font-bold leading-tight tracking-[-0.015em]">Badges</h2>
+        <div class="grid grid-cols-4 gap-4">
+          <div class="flex flex-col items-center gap-2">
+            <div class="flex items-center justify-center rounded-full bg-secondary size-14">
+              <span class="material-symbols-outlined text-text-primary-dark text-3xl">local_florist</span>
+            </div>
+            <p class="text-text-secondary-dark text-xs text-center">First Bloom</p>
+          </div>
+          <div class="flex flex-col items-center gap-2">
+            <div class="flex items-center justify-center rounded-full bg-primary size-14">
+              <span class="material-symbols-outlined text-text-primary-dark text-3xl">neurology</span>
+            </div>
+            <p class="text-text-secondary-dark text-xs text-center">Deep Thinker</p>
+          </div>
+          <div class="flex flex-col items-center gap-2">
+            <div class="flex items-center justify-center rounded-full bg-secondary size-14">
+              <span class="material-symbols-outlined text-text-primary-dark text-3xl">celebration</span>
+            </div>
+            <p class="text-text-secondary-dark text-xs text-center">100 Chats</p>
+          </div>
+          <div class="flex flex-col items-center gap-2">
+            <div class="flex items-center justify-center rounded-full bg-primary/30 size-14">
+              <span class="material-symbols-outlined text-text-secondary-dark text-3xl">explore</span>
+            </div>
+            <p class="text-text-secondary-dark text-xs text-center">Explorer</p>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="h-12"></div>
+  </div>
+</body>
+</html>
