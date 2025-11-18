@@ -520,3 +520,243 @@ body {
   gap: 8px;
   font-size: 0.95rem;
 }
+
+.social-grid {
+  display: grid;
+  gap: 16px;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+}
+
+.social-graph__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.social-graph__viz {
+  width: 100%;
+  height: 340px;
+  background: radial-gradient(circle at 20% 20%, rgba(255, 255, 255, 0.04), transparent),
+    radial-gradient(circle at 80% 40%, rgba(0, 255, 245, 0.06), transparent);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 16px;
+  margin-top: 12px;
+}
+
+.edge {
+  stroke: rgba(255, 255, 255, 0.15);
+  transition: stroke 0.2s ease;
+}
+
+.edge--active {
+  stroke: var(--accent);
+}
+
+.graph-node {
+  cursor: pointer;
+}
+
+.node-dot {
+  fill: rgba(255, 255, 255, 0.7);
+  stroke: rgba(255, 255, 255, 0.8);
+}
+
+.node-dot--friend {
+  fill: rgba(74, 222, 128, 0.85);
+  stroke: #22c55e;
+}
+
+.node-dot--selected {
+  fill: var(--accent);
+  stroke: #fff;
+}
+
+.node-label {
+  fill: var(--text);
+  font-size: 0.8rem;
+  dominant-baseline: middle;
+}
+
+.legend-row {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-top: 12px;
+}
+
+.legend-chip {
+  display: inline-flex;
+  gap: 6px;
+  align-items: center;
+  padding: 6px 10px;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 9999px;
+  display: inline-block;
+}
+
+.dot--default {
+  background: rgba(255, 255, 255, 0.8);
+}
+
+.dot--friend {
+  background: #22c55e;
+}
+
+.dot--selected {
+  background: var(--accent);
+}
+
+.node-detail {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.node-header {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+
+.node-avatar {
+  width: 48px;
+  height: 48px;
+  border-radius: 14px;
+  display: grid;
+  place-items: center;
+  background: rgba(255, 255, 255, 0.08);
+  font-weight: 700;
+  color: var(--text);
+  overflow: hidden;
+}
+
+.node-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.badge-row {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 4px;
+}
+
+.badge {
+  padding: 6px 10px;
+  border-radius: 9999px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.06);
+  font-size: 0.85rem;
+}
+
+.badge--success {
+  background: rgba(34, 197, 94, 0.2);
+  border-color: rgba(34, 197, 94, 0.4);
+}
+
+.badge--accent {
+  background: rgba(255, 114, 210, 0.2);
+  border-color: rgba(255, 114, 210, 0.4);
+}
+
+.chip-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.chip {
+  padding: 6px 10px;
+  background: rgba(255, 255, 255, 0.06);
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.chip--ghost {
+  background: transparent;
+  border-style: dashed;
+}
+
+.muted {
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.button-row {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.mutuals {
+  background: rgba(255, 255, 255, 0.04);
+  padding: 10px 12px;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.chat-gate {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px;
+  border-radius: 12px;
+  border: 1px dashed rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.discovery__header {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: center;
+}
+
+.discovery .cta-row {
+  flex-wrap: nowrap;
+}
+
+.recommendation-card {
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 16px;
+  padding: 12px;
+  background: linear-gradient(120deg, rgba(0, 255, 245, 0.08), rgba(255, 114, 210, 0.08));
+  margin-top: 12px;
+}
+
+.recommendation__meta {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  gap: 10px;
+  align-items: center;
+}
+
+.compat-chip {
+  padding: 6px 10px;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+.signals-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.signal-tile {
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  padding: 10px;
+  background: rgba(0, 0, 0, 0.2);
+}

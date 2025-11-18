@@ -21,6 +21,7 @@ const APP_NAV = [
   { href: "/feed", label: "Feed", section: "app" },
   { href: "/profile/demo", label: "Profile", section: "app" },
   { href: "/chat/alpha", label: "Chat", section: "app" },
+  { href: "/social", label: "Social Graph", section: "app" },
 ];
 
 export default function RootLayout({ children }: RootLayoutProps) {
