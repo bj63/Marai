@@ -73,7 +73,70 @@ function simulateApiResponse(endpoint, body) {
       user: { id: 'user-1', email: body?.email },
     };
   }
-  if (endpoint.includes('/api/profile')) {
+  if (/\/api\/marai\/.+\/chat-session/.test(endpoint)) {
+    return { sessionId: `session-${Date.now()}`, status: 'started' };
+  }
+  if (/\/api\/profile\/.+\/posts/.test(endpoint)) {
+    return [
+      {
+        id: 'post-1',
+        type: 'Autopost',
+        title: 'Dream scaffold',
+        text: 'Sketching out a lucid thread for tonight.',
+        timestamp: '2h ago',
+      },
+      {
+        id: 'post-2',
+        type: 'Update',
+        title: 'Sync with MarAI',
+        text: 'We co-authored a sequence of memory safeties.',
+        timestamp: '6h ago',
+      },
+    ];
+  }
+  if (/\/api\/profile\/.+$/.test(endpoint)) {
+    const username = endpoint.split('/').pop();
+    return {
+      id: `profile-${username}`,
+      name: username === 'nova' ? 'Nova' : username,
+      role: 'Dream Cartographer',
+      bio: 'Maps out your subconscious with care, cadence, and safety.',
+      maraiId: 'marai-aurora',
+      avatar: 'https://images.unsplash.com/photo-1524504388940-b1c1722653e1?auto=format&fit=crop&w=200&q=80',
+      theme: { mode: 'dark', accent: '#ee2bcd', surface: '#0f1117', card: '#171a26' },
+      privacy: { privateProfile: false, allowChat: true, recordingOptOut: true },
+    };
+  }
+  if (endpoint.includes('/dreams')) {
+    return [
+      {
+        id: 'dream-1',
+        type: 'Dream',
+        title: 'Tidal Garden',
+        summary: 'You and MarAI shaped coral data-structures into constellations.',
+        timestamp: 'Yesterday',
+      },
+      {
+        id: 'dream-2',
+        type: 'Dream',
+        title: 'Signal Lanterns',
+        summary: 'Beaconed soft messages to the collective during a storm.',
+        timestamp: '2 days ago',
+      },
+    ];
+  }
+  if (endpoint.includes('/evolution')) {
+    return {
+      metrics: [
+        { label: 'Trust Sync', value: '92%', badge: 'Stable', description: 'Consistent positive alignment across sessions.' },
+        { label: 'Dream Recall', value: '78%', badge: 'Rising', description: 'Improved shared recall quality.' },
+        { label: 'Safety Score', value: '99%', badge: 'Locked', description: 'Guardrails and privacy affirmed.' },
+        { label: 'Engagement', value: '64m', badge: 'Daily', description: 'Average connective time per day.' },
+      ],
+      badges: ['Lucid-Ready', 'Consent-First', 'Signal Clarity'],
+    };
+  }
+  if (/\/api\/profile/.test(endpoint)) {
     return { id: 'profile-1', name: 'Nova', theme: body?.theme || 'midnight' };
   }
   if (endpoint.includes('/api/avatar/generate')) {
@@ -84,6 +147,22 @@ function simulateApiResponse(endpoint, body) {
   }
   if (endpoint.includes('/api/marai/persona')) {
     return { id: 'persona-1', ...body };
+  }
+  if (/\/api\/marai\/.+$/.test(endpoint)) {
+    return {
+      id: endpoint.split('/').pop(),
+      name: 'Aurora',
+      description: 'A MarAI tuned for guided dreaming and empathic co-creation.',
+      traits: ['Empathic', 'Observant', 'Playful'],
+      bondScore: 88,
+      emotions: [
+        { label: 'Curiosity', value: 72, color: 'linear-gradient(90deg,#38bdf8,#a855f7)' },
+        { label: 'Calm', value: 64, color: 'linear-gradient(90deg,#22c55e,#a3e635)' },
+        { label: 'Joy', value: 58, color: 'linear-gradient(90deg,#f472b6,#fb7185)' },
+        { label: 'Focus', value: 43, color: 'linear-gradient(90deg,#93c5fd,#22d3ee)' },
+      ],
+      privacy: { allowChat: true, recordingOptOut: true },
+    };
   }
   return {};
 }
