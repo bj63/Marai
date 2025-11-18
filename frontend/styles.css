@@ -185,6 +185,10 @@ h4 {
   gap: 12px;
 }
 
+.stack.compact {
+  gap: 8px;
+}
+
 .grid {
   display: grid;
   gap: 18px;
@@ -256,6 +260,10 @@ button:hover {
   display: flex;
   gap: 10px;
   flex-wrap: wrap;
+}
+
+.actions.align-end {
+  align-items: flex-end;
 }
 
 .status {
