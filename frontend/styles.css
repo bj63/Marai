@@ -1,16 +1,46 @@
 :root {
-  --bg: #0f1117;
-  --panel: #141824;
-  --card: #191f2e;
-  --border: #232a3a;
-  --text: #eef2ff;
-  --muted: #9ba8c7;
-  --accent: #8a7bff;
-  --accent-2: #6cf0f4;
-  --glow: 0 0 20px rgba(108, 240, 244, 0.45), 0 0 40px rgba(138, 123, 255, 0.35);
-  --radius: 14px;
-  --shadow: 0 20px 60px rgba(0, 0, 0, 0.45);
-  --space: 16px;
+  /* Color tokens */
+  --color-bg: #0f1117;
+  --color-surface: #141824;
+  --color-card: #191f2e;
+  --color-border: #232a3a;
+  --color-text: #eef2ff;
+  --color-muted: #9ba8c7;
+  --color-accent: #8a7bff;
+  --color-accent-2: #6cf0f4;
+  --color-success: #16a34a;
+  --color-warning: #f59e0b;
+  --color-error: #ef4444;
+
+  /* Spacing + radii */
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-6: 24px;
+  --radius-sm: 10px;
+  --radius-md: 14px;
+  --radius-pill: 999px;
+
+  /* Shadows + motion */
+  --shadow-soft: 0 10px 30px rgba(0, 0, 0, 0.35);
+  --shadow-strong: 0 20px 60px rgba(0, 0, 0, 0.45);
+  --glow-ambient: 0 0 20px rgba(108, 240, 244, 0.45), 0 0 40px rgba(138, 123, 255, 0.35);
+  --motion-snap: cubic-bezier(0.2, 0.8, 0.2, 1);
+  --motion-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+
+  /* Legacy aliases */
+  --bg: var(--color-bg);
+  --panel: var(--color-surface);
+  --card: var(--color-card);
+  --border: var(--color-border);
+  --text: var(--color-text);
+  --muted: var(--color-muted);
+  --accent: var(--color-accent);
+  --accent-2: var(--color-accent-2);
+  --glow: var(--glow-ambient);
+  --radius: var(--radius-md);
+  --shadow: var(--shadow-strong);
+  --space: var(--space-4);
 }
 
 * {
@@ -21,8 +51,8 @@ body {
   margin: 0;
   min-height: 100vh;
   background: radial-gradient(circle at 10% 20%, rgba(138, 123, 255, 0.1), transparent 30%),
-    radial-gradient(circle at 80% 0%, rgba(108, 240, 244, 0.12), transparent 26%), var(--bg);
-  color: var(--text);
+    radial-gradient(circle at 80% 0%, rgba(108, 240, 244, 0.12), transparent 26%), var(--color-bg);
+  color: var(--color-text);
   font-family: "Inter", system-ui, -apple-system, sans-serif;
 }
 
@@ -33,7 +63,7 @@ body {
 }
 
 .sidebar {
-  border-right: 1px solid var(--border);
+  border-right: 1px solid var(--color-border);
   background: linear-gradient(180deg, #111524 0%, #0f1320 60%, #0c101c 100%);
   padding: 24px 18px;
   display: flex;
@@ -54,8 +84,8 @@ body {
   width: 42px;
   height: 42px;
   border-radius: 50%;
-  background: linear-gradient(135deg, var(--accent), var(--accent-2));
-  box-shadow: var(--glow);
+  background: linear-gradient(135deg, var(--color-accent), var(--color-accent-2));
+  box-shadow: var(--glow-ambient);
 }
 
 nav {
@@ -65,25 +95,26 @@ nav {
 
 .nav-btn {
   background: transparent;
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
   padding: 12px 14px;
-  color: var(--text);
+  color: var(--color-text);
   font-weight: 600;
   text-align: left;
   cursor: pointer;
-  transition: border 0.2s ease, transform 0.2s ease;
+  transition: border 0.2s var(--motion-snap), transform 0.2s var(--motion-snap), box-shadow 0.2s var(--motion-snap);
 }
 
 .nav-btn:hover,
 .nav-btn.active {
-  border-color: var(--accent-2);
+  border-color: var(--color-accent-2);
   transform: translateX(4px);
+  box-shadow: 0 10px 30px rgba(108, 240, 244, 0.2);
 }
 
 .helper-card {
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
   padding: 14px;
   background: rgba(255, 255, 255, 0.02);
   display: grid;
@@ -94,6 +125,30 @@ main {
   padding: 32px;
   display: grid;
   gap: 32px;
+}
+
+.status-banner {
+  display: none;
+  background: linear-gradient(90deg, rgba(245, 158, 11, 0.15), rgba(138, 123, 255, 0.12));
+  border: 1px solid rgba(245, 158, 11, 0.4);
+  color: var(--color-text);
+  padding: 12px 16px;
+  border-radius: var(--radius-md);
+  align-items: center;
+  gap: 10px;
+  box-shadow: var(--shadow-soft);
+}
+
+.status-banner.active {
+  display: flex;
+}
+
+.status-banner .dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--color-warning);
+  box-shadow: 0 0 0 6px rgba(245, 158, 11, 0.15);
 }
 
 .panel {
@@ -117,7 +172,7 @@ main {
   text-transform: uppercase;
   letter-spacing: 0.08em;
   font-size: 12px;
-  color: var(--muted);
+  color: var(--color-muted);
   margin: 0 0 6px;
 }
 
@@ -138,16 +193,16 @@ h4 {
 }
 
 .lede {
-  color: var(--muted);
+  color: var(--color-muted);
   max-width: 720px;
 }
 
 .card {
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
   background: linear-gradient(145deg, rgba(255, 255, 255, 0.02), rgba(255, 255, 255, 0));
   padding: 18px;
-  box-shadow: var(--shadow);
+  box-shadow: var(--shadow-strong);
 }
 
 .card-header {
@@ -160,18 +215,18 @@ h4 {
 .badge {
   background: rgba(138, 123, 255, 0.14);
   border: 1px solid rgba(138, 123, 255, 0.4);
-  color: var(--text);
+  color: var(--color-text);
   padding: 6px 10px;
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   font-size: 12px;
 }
 
 .pill {
   padding: 8px 12px;
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   background: rgba(108, 240, 244, 0.1);
   border: 1px solid rgba(108, 240, 244, 0.3);
-  color: var(--text);
+  color: var(--color-text);
   font-weight: 600;
 }
 
@@ -196,6 +251,90 @@ h4 {
 
 .grid.two {
   grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+}
+
+.toast-layer {
+  position: fixed;
+  top: 16px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 99;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  width: min(720px, 96vw);
+}
+
+.toast {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 14px;
+  border-radius: var(--radius-md);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(25, 31, 46, 0.92);
+  color: var(--color-text);
+  box-shadow: var(--shadow-soft);
+  animation: slideIn 180ms var(--motion-spring);
+}
+
+.toast.success {
+  border-color: rgba(22, 163, 74, 0.6);
+  background: rgba(22, 163, 74, 0.12);
+}
+
+.toast.error {
+  border-color: rgba(239, 68, 68, 0.6);
+  background: rgba(239, 68, 68, 0.12);
+}
+
+.toast button {
+  background: none;
+  border: 1px solid var(--color-border);
+  color: var(--color-text);
+  border-radius: var(--radius-sm);
+  padding: 6px 10px;
+  cursor: pointer;
+}
+
+.motion-glow {
+  box-shadow: var(--glow-ambient);
+}
+
+.motion-shimmer {
+  position: relative;
+  overflow: hidden;
+}
+
+.motion-shimmer::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(120deg, transparent 0%, rgba(255, 255, 255, 0.08) 40%, transparent 80%);
+  transform: translateX(-100%);
+  animation: shimmer 2.4s infinite;
+}
+
+.spring-transition {
+  transition: all 220ms var(--motion-spring);
+}
+
+@keyframes shimmer {
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translate(-50%, -10px);
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, 0);
+  }
 }
 
 .grid.three {
@@ -348,22 +487,22 @@ button:hover {
 
 .tab {
   padding: 10px 14px;
-  border: 1px solid var(--border);
+  border: 1px solid var(--color-border);
   background: rgba(255, 255, 255, 0.02);
-  color: var(--text);
+  color: var(--color-text);
 }
 
 .tab.active {
-  border-color: var(--accent-2);
-  box-shadow: var(--glow);
+  border-color: var(--color-accent-2);
+  box-shadow: var(--glow-ambient);
 }
 
 .feed-card,
 .explore-card,
 .dream-card,
 .graph-node {
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
   padding: 14px;
   background: rgba(255, 255, 255, 0.02);
   display: grid;
@@ -371,8 +510,8 @@ button:hover {
 }
 
 .relationship-card {
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
   padding: 14px;
   background: linear-gradient(135deg, rgba(138, 123, 255, 0.06), rgba(108, 240, 244, 0.03));
   display: grid;

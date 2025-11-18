@@ -13,6 +13,15 @@
     />
   </head>
   <body>
+    <div id="offline-banner" class="status-banner" role="status" aria-live="polite">
+      <span class="dot" aria-hidden="true"></span>
+      <div>
+        <strong>Offline mode</strong>
+        <p class="lede">Actions will be queued and retried when you reconnect.</p>
+      </div>
+      <button class="ghost" id="retry-queued" aria-label="Retry queued jobs">Retry queued jobs</button>
+    </div>
+    <div id="toast-layer" class="toast-layer" aria-live="polite"></div>
     <div class="app-shell">
       <aside class="sidebar">
         <div class="brand">
@@ -22,7 +31,7 @@
             <p class="title">Story Studio</p>
           </div>
         </div>
-        <nav>
+        <nav aria-label="Primary navigation">
           <button class="nav-btn" data-target="onboarding">Onboarding</button>
           <button class="nav-btn" data-target="feed">Home Feed</button>
           <button class="nav-btn" data-target="profile">RenAI Card</button>
@@ -472,6 +481,17 @@
                 <p class="status" id="video-poll-status">Waiting</p>
               </div>
             </div>
+          </div>
+          <div class="card motion-shimmer" aria-live="polite">
+            <div class="card-header">
+              <div>
+                <p class="eyebrow">Reliability</p>
+                <h3>Retry queue</h3>
+              </div>
+              <span class="badge">Offline friendly</span>
+            </div>
+            <p class="lede" id="retry-queue-status">No queued jobs</p>
+            <ul id="retry-queue-list" class="stat-list"></ul>
           </div>
           <div class="card">
             <div class="card-header">
