@@ -537,78 +537,273 @@ renderDiscovery();
 
 // Explore
 const exploreList = document.getElementById('explore-list');
+const exploreForm = document.getElementById('explore-form');
+const exploreCategory = document.getElementById('explore-category');
+const exploreCursor = document.getElementById('explore-cursor');
+const exploreStatus = document.getElementById('explore-status');
+const exploreActionStatus = document.getElementById('explore-action-status');
+
 const exploreItems = [
-  { name: 'EveAI', category: 'trending', action: 'Chat' },
-  { name: 'MoAI', category: 'most evolved', action: 'Follow' },
-  { name: 'LunaAI', category: 'viral dialog', action: 'View' },
-  { name: 'Brand Pulse', category: 'brand spot', action: 'Generate' },
+  { id: 'marai-18', name: 'EveAI', category: 'trending', persona: 'neon poet' },
+  { id: 'marai-42', name: 'MoAI', category: 'most-evolved', persona: 'adaptive mentor' },
+  { id: 'marai-77', name: 'LunaAI', category: 'viral-dialog', persona: 'debate partner' },
+  { id: 'brand-11', name: 'Brand Pulse', category: 'brand', persona: 'scene engine' },
 ];
 
-function renderExplore() {
+function renderExplore(filter = 'all') {
   exploreList.innerHTML = '';
-  exploreItems.forEach((item) => {
-    const card = document.createElement('div');
-    card.className = 'explore-card';
-    card.innerHTML = `
-      <div class="card-header">
-        <div>
-          <p class="eyebrow">${item.category}</p>
-          <h3>${item.name}</h3>
+  exploreItems
+    .filter((item) => filter === 'all' || item.category === filter)
+    .forEach((item) => {
+      const card = document.createElement('div');
+      card.className = 'explore-card';
+      card.innerHTML = `
+        <div class="card-header">
+          <div>
+            <p class="eyebrow">${item.category}</p>
+            <h3>${item.name}</h3>
+          </div>
+          <span class="badge">GET /api/explore</span>
         </div>
-        <button class="ghost">${item.action}</button>
-      </div>
-      <p class="lede">Discovery action routed to server</p>
-    `;
-    exploreList.appendChild(card);
-  });
+        <p class="lede">${item.persona} · follow or chat to open /api/marai/${item.id}/chat-session.</p>
+        <div class="actions">
+          <button class="ghost" data-action="follow" data-id="${item.id}">Follow</button>
+          <button class="ghost" data-action="chat" data-id="${item.id}">Start chat</button>
+        </div>
+      `;
+      exploreList.appendChild(card);
+    });
 }
+
+exploreForm.addEventListener('submit', (e) => {
+  e.preventDefault();
+  const category = exploreCategory.value;
+  const cursor = exploreCursor.value || 'latest';
+  exploreStatus.textContent = `GET /api/explore?category=${category}&cursor=${cursor}`;
+  simulateApi(`/api/explore?category=${category}&cursor=${cursor}`).then(() => {
+    exploreStatus.textContent = `Loaded ${category} feed from cursor ${cursor}`;
+    renderExplore(category);
+  });
+});
+
+exploreList.addEventListener('click', (e) => {
+  const btn = e.target.closest('button[data-action]');
+  if (!btn) return;
+  const id = btn.dataset.id;
+  const endpoint = btn.dataset.action === 'follow' ? `/api/marai/${id}/follow` : `/api/marai/${id}/chat-session`;
+  exploreActionStatus.textContent = `Calling ${endpoint}`;
+  simulateApi(endpoint).then(() => {
+    exploreActionStatus.textContent = btn.dataset.action === 'follow' ? `Followed ${id}` : `Chat started for ${id}`;
+  });
+});
 
 renderExplore();
 
 // Dreams
 const dreamList = document.getElementById('dream-list');
+const dreamFilter = document.getElementById('dream-filter');
+const dreamMood = document.getElementById('dream-mood');
+const dreamStatus = document.getElementById('dream-status');
+const dreamDetail = document.getElementById('dream-detail');
+const dreamDetailStatus = document.getElementById('dream-detail-status');
+
 const dreams = [
-  { id: 'd1', mood: 'calm', caption: 'Moonlit rails humming softly.' },
-  { id: 'd2', mood: 'bright', caption: 'Petal storms over neon rivers.' },
-  { id: 'd3', mood: 'moody', caption: 'Glass towers breathing fog.' },
+  {
+    id: 'd1',
+    mood: 'calm',
+    caption: 'Moonlit rails humming softly.',
+    detail: 'Widescreen shot; lavender fog; gentle soundtrack.',
+  },
+  {
+    id: 'd2',
+    mood: 'bright',
+    caption: 'Petal storms over neon rivers.',
+    detail: 'Vivid gradients; upbeat tempo; hopeful pacing.',
+  },
+  {
+    id: 'd3',
+    mood: 'moody',
+    caption: 'Glass towers breathing fog.',
+    detail: 'Low saturation; noir lighting; whispering echoes.',
+  },
 ];
 
-function renderDreams() {
+function renderDreams(filter = 'all') {
   dreamList.innerHTML = '';
-  dreams.forEach((dream) => {
-    const card = document.createElement('div');
-    card.className = 'dream-card';
-    card.innerHTML = `
-      <div class="card-header">
-        <div>
-          <p class="eyebrow">${dream.mood}</p>
-          <h3>${dream.caption}</h3>
+  dreams
+    .filter((dream) => filter === 'all' || dream.mood === filter)
+    .forEach((dream) => {
+      const card = document.createElement('div');
+      card.className = 'dream-card';
+      card.innerHTML = `
+        <div class="card-header">
+          <div>
+            <p class="eyebrow">${dream.mood}</p>
+            <h3>${dream.caption}</h3>
+          </div>
+          <div class="actions">
+            <button class="ghost view" data-id="${dream.id}">View</button>
+            <button class="ghost regen" data-id="${dream.id}">Regenerate</button>
+            <button class="ghost share" data-id="${dream.id}">Share</button>
+          </div>
         </div>
-        <div class="actions">
-          <button class="ghost regen" data-id="${dream.id}">Regenerate</button>
-          <button class="ghost share" data-id="${dream.id}">Share</button>
-        </div>
-      </div>
-      <p class="lede">Diary entry routed to /api/dreams/${dream.id}</p>
-    `;
-    dreamList.appendChild(card);
-  });
+        <p class="lede">GET /api/dreams/${dream.id} for detail; actions patch diary entries.</p>
+      `;
+      dreamList.appendChild(card);
+    });
 }
+
+function showDreamDetail(dream) {
+  dreamDetail.innerHTML = `
+    <p class="eyebrow">${dream.mood}</p>
+    <h4>${dream.caption}</h4>
+    <p class="lede">${dream.detail}</p>
+  `;
+}
+
+dreamFilter.addEventListener('submit', (e) => {
+  e.preventDefault();
+  const mood = dreamMood.value;
+  dreamStatus.textContent = `GET /api/dreams?mood=${mood}`;
+  simulateApi(`/api/dreams?mood=${mood}`).then(() => {
+    dreamStatus.textContent = `Loaded ${mood} dreams`;
+    renderDreams(mood);
+  });
+});
 
 dreamList.addEventListener('click', (e) => {
   const btn = e.target.closest('button');
   if (!btn) return;
   const id = btn.dataset.id;
+  const dream = dreams.find((d) => d.id === id);
+  if (!dream) return;
+  if (btn.classList.contains('view')) {
+    dreamDetailStatus.textContent = `Fetching /api/dreams/${id}`;
+    simulateApi(`/api/dreams/${id}`).then(() => {
+      dreamDetailStatus.textContent = `Loaded /api/dreams/${id}`;
+      showDreamDetail(dream);
+    });
+    return;
+  }
   btn.textContent = 'Working…';
   const endpoint = btn.classList.contains('regen')
     ? `/api/dreams/${id}/regenerate`
     : `/api/dreams/${id}/share`;
   simulateApi(endpoint).then(() => {
     btn.textContent = 'Done';
+    dreamDetailStatus.textContent = `${btn.classList.contains('regen') ? 'Regenerated' : 'Shared'} ${id}`;
   });
 });
 
 renderDreams();
+
+// Brand Hub
+const brandLoadBtn = document.getElementById('brand-load');
+const brandLoadStatus = document.getElementById('brand-load-status');
+const brandPrompt = document.getElementById('brand-prompt');
+const brandGenerateBtn = document.getElementById('brand-generate');
+const brandGenerateStatus = document.getElementById('brand-generate-status');
+const brandPreferencesForm = document.getElementById('brand-preferences');
+const brandPalette = document.getElementById('brand-palette');
+const brandTone = document.getElementById('brand-tone');
+const brandPrefStatus = document.getElementById('brand-pref-status');
+
+brandLoadBtn.addEventListener('click', () => {
+  brandLoadStatus.textContent = 'GET /api/brand-ai';
+  simulateApi('/api/brand-ai').then(() => {
+    brandLoadStatus.textContent = 'Brand defaults hydrated';
+  });
+});
+
+brandGenerateBtn.addEventListener('click', () => {
+  brandGenerateStatus.textContent = 'Submitting scene job…';
+  simulateApi('/api/brand-ai/scene', { prompt: brandPrompt.value }).then(() => {
+    brandGenerateStatus.textContent = 'Scene generated with brand safety';
+  });
+});
+
+brandPreferencesForm.addEventListener('submit', (e) => {
+  e.preventDefault();
+  brandPrefStatus.textContent = 'Saving preferences…';
+  simulateApi('/api/brand-ai/preferences', { palette: brandPalette.value, tone: brandTone.value }).then(() => {
+    brandPrefStatus.textContent = 'Preferences stored';
+  });
+});
+
+// Story Studio
+let currentJobId = '';
+const videoJobForm = document.getElementById('video-job-form');
+const videoPrompt = document.getElementById('video-prompt');
+const videoResolution = document.getElementById('video-resolution');
+const videoJobStatus = document.getElementById('video-job-status');
+const videoJobIdEl = document.getElementById('video-job-id');
+const videoPollBtn = document.getElementById('video-poll');
+const videoExportBtn = document.getElementById('video-export');
+const videoPollStatus = document.getElementById('video-poll-status');
+const presetForm = document.getElementById('preset-form');
+const presetName = document.getElementById('preset-name');
+const presetStyle = document.getElementById('preset-style');
+const presetStatus = document.getElementById('preset-status');
+const presetList = document.getElementById('preset-list');
+
+let presets = [
+  ['Soft bloom', 'cinematic'],
+  ['Kinetic dance', 'lofi'],
+];
+
+function renderPresets() {
+  presetList.innerHTML = '';
+  presets.forEach(([name, style]) => {
+    const row = document.createElement('li');
+    row.className = 'stat-item';
+    row.innerHTML = `<span>${name}</span><strong>${style}</strong>`;
+    presetList.appendChild(row);
+  });
+}
+
+videoJobForm.addEventListener('submit', (e) => {
+  e.preventDefault();
+  videoJobStatus.textContent = 'POST /api/video-jobs';
+  simulateApi('/api/video-jobs', { prompt: videoPrompt.value, resolution: videoResolution.value }).then(() => {
+    currentJobId = `job_${Date.now()}`;
+    videoJobStatus.textContent = `Submitted as ${currentJobId}`;
+    videoJobIdEl.textContent = `Job ID ${currentJobId}`;
+  });
+});
+
+videoPollBtn.addEventListener('click', () => {
+  if (!currentJobId) {
+    videoPollStatus.textContent = 'Submit a job first';
+    return;
+  }
+  videoPollStatus.textContent = `GET /api/video-jobs/${currentJobId}`;
+  simulateApi(`/api/video-jobs/${currentJobId}`).then(() => {
+    videoPollStatus.textContent = 'Progress: ready to export';
+  });
+});
+
+videoExportBtn.addEventListener('click', () => {
+  if (!currentJobId) {
+    videoPollStatus.textContent = 'No job to export';
+    return;
+  }
+  videoPollStatus.textContent = `POST /api/video-jobs/${currentJobId}/export`;
+  simulateApi(`/api/video-jobs/${currentJobId}/export`).then(() => {
+    videoPollStatus.textContent = 'Export ready';
+  });
+});
+
+presetForm.addEventListener('submit', (e) => {
+  e.preventDefault();
+  presetStatus.textContent = 'POST /api/video-presets';
+  simulateApi('/api/video-presets', { name: presetName.value, style: presetStyle.value }).then(() => {
+    presetStatus.textContent = 'Preset saved';
+    presets = [...presets, [presetName.value, presetStyle.value]];
+    renderPresets();
+  });
+});
+
+renderPresets();
 
 // Admin
 const adminMetrics = document.getElementById('admin-metrics');
