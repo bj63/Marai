@@ -1,6 +1,7 @@
 const toastContainerId = 'toast-layer';
 const tokenStorageKey = 'marai.auth.tokens';
 const profileStorageKey = 'marai.profile';
+const chatStorageKey = 'marai.chat';
 const cdnBaseUrl = 'https://cdn.marai.gg';
 
 const retryQueue = [];
@@ -88,42 +89,66 @@ function lazyLoadMedia(selector) {
   });
 }
 
-async function apiRequest(endpoint, { method = 'GET', body, headers = {}, mockFallback = true } = {}) {
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), 6000);
-  try {
-    const response = await fetch(endpoint, {
-      method,
-      body: body instanceof FormData ? body : body ? JSON.stringify(body) : undefined,
-      headers: body instanceof FormData
-        ? headers
-        : { 'Content-Type': 'application/json', ...headers },
-      signal: controller.signal,
-    });
-    clearTimeout(timer);
-    if (!response.ok) {
-      const errorText = await response.text();
-      throw new Error(errorText || `Request failed: ${response.status}`);
+async function apiRequest(
+  endpoint,
+  {
+    method = 'GET',
+    body,
+    headers = {},
+    mockFallback = true,
+    timeoutMs = 6000,
+    retries = 2,
+    backoffMs = 500,
+  } = {}
+) {
+  let attempt = 0;
+  let lastError = null;
+
+  while (attempt <= retries) {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), timeoutMs);
+
+    try {
+      const response = await fetch(endpoint, {
+        method,
+        body: body instanceof FormData ? body : body ? JSON.stringify(body) : undefined,
+        headers: body instanceof FormData
+          ? headers
+          : { 'Content-Type': 'application/json', ...headers },
+        signal: controller.signal,
+      });
+      clearTimeout(timer);
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(errorText || `Request failed: ${response.status}`);
+      }
+      const contentType = response.headers.get('content-type');
+      if (contentType && contentType.includes('application/json')) {
+        return await response.json();
+      }
+      return {};
+    } catch (error) {
+      clearTimeout(timer);
+      lastError = error;
+      logApiFailure(endpoint, error, { attempt });
+      if (attempt === retries) break;
+      const jitter = Math.random() * 100;
+      await new Promise((resolve) => setTimeout(resolve, backoffMs * Math.pow(2, attempt) + jitter));
+      attempt += 1;
     }
-    const contentType = response.headers.get('content-type');
-    if (contentType && contentType.includes('application/json')) {
-      return await response.json();
-    }
-    return {};
-  } catch (error) {
-    clearTimeout(timer);
-    if (!mockFallback) throw error;
-    return new Promise((resolve, reject) => {
-      setTimeout(() => {
-        const simulated = simulateApiResponse(endpoint, body);
-        if (simulated instanceof Error) {
-          reject(simulated);
-        } else {
-          resolve(simulated);
-        }
-      }, 500);
-    });
   }
+
+  if (!mockFallback) throw lastError || new Error('Request failed');
+  return new Promise((resolve, reject) => {
+    setTimeout(() => {
+      const simulated = simulateApiResponse(endpoint, body);
+      if (simulated instanceof Error) {
+        reject(simulated);
+      } else {
+        resolve(simulated);
+      }
+    }, 500);
+  });
 }
 
 function simulateApiResponse(endpoint, body) {
@@ -235,6 +260,58 @@ function persistProfile(profile) {
   localStorage.setItem(profileStorageKey, JSON.stringify(profile));
 }
 
+function persistChatHistory(userId, messages = []) {
+  const cached = loadNamespacedCache(chatStorageKey, userId);
+  cached.data = messages;
+  localStorage.setItem(chatStorageKey, JSON.stringify(cached));
+}
+
+function loadNamespacedCache(baseKey, userId, ttlMs = 5 * 60 * 1000) {
+  const cached = localStorage.getItem(baseKey);
+  if (!cached) return { userId, timestamp: 0, data: null };
+  try {
+    const parsed = JSON.parse(cached);
+    if (parsed.userId !== userId || Date.now() - parsed.timestamp > ttlMs) {
+      return { userId, timestamp: 0, data: null };
+    }
+    return parsed;
+  } catch (error) {
+    console.warn('Cache parse failed', error);
+    return { userId, timestamp: 0, data: null };
+  }
+}
+
+function persistNamespacedCache(baseKey, userId, data) {
+  const payload = { userId, data, timestamp: Date.now() };
+  localStorage.setItem(baseKey, JSON.stringify(payload));
+  return payload;
+}
+
+function loadProfileCache(userId) {
+  return loadNamespacedCache(profileStorageKey, userId);
+}
+
+function persistProfileCache(userId, data) {
+  return persistNamespacedCache(profileStorageKey, userId, data);
+}
+
+function loadChatHistory(userId) {
+  return loadNamespacedCache(chatStorageKey, userId, 15 * 60 * 1000);
+}
+
+function logApiFailure(endpoint, error, meta = {}) {
+  const entry = {
+    endpoint,
+    message: error?.message || 'Unknown error',
+    at: new Date().toISOString(),
+    meta,
+  };
+  console.warn('[api:failure]', entry);
+  window.__maraiApiLog = window.__maraiApiLog || [];
+  window.__maraiApiLog.push(entry);
+  document.dispatchEvent(new CustomEvent('marai:api-error', { detail: entry }));
+}
+
 function optimisticState(target, pendingText, doneText) {
   const original = target.textContent;
   target.textContent = pendingText;
@@ -243,4 +320,36 @@ function optimisticState(target, pendingText, doneText) {
     target.textContent = doneText || original;
     target.disabled = false;
   };
+}
+
+function virtualizeList(container, items, renderItem, { batchSize = 10, overscan = 3 } = {}) {
+  if (!container) return () => {};
+  let cursor = 0;
+  const sentinel = document.createElement('div');
+  sentinel.className = 'virtual-sentinel';
+
+  const renderBatch = () => {
+    const next = items.slice(cursor, cursor + batchSize);
+    cursor += next.length;
+    const fragment = document.createDocumentFragment();
+    next.forEach((item) => fragment.appendChild(renderItem(item)));
+    container.appendChild(fragment);
+    container.appendChild(sentinel);
+  };
+
+  const observer = new IntersectionObserver(
+    (entries) => {
+      const entry = entries.find((e) => e.isIntersecting);
+      if (!entry) return;
+      if (cursor < items.length) {
+        renderBatch();
+      }
+    },
+    { root: null, rootMargin: `${overscan * 100}px 0px` }
+  );
+
+  container.appendChild(sentinel);
+  renderBatch();
+  observer.observe(sentinel);
+  return () => observer.disconnect();
 }

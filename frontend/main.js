@@ -11,6 +11,11 @@ const currentUser = {
   roles: ['admin'],
 };
 
+const analyticsBuffer = [];
+const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
+applyReducedMotion(prefersReducedMotion.matches);
+prefersReducedMotion.addEventListener('change', (event) => applyReducedMotion(event.matches));
+
 const offlineBanner = document.getElementById('offline-banner');
 const retryQueuedBtn = document.getElementById('retry-queued');
 const retryQueueStatus = document.getElementById('retry-queue-status');
@@ -43,6 +48,7 @@ navButtons.forEach((btn) => {
     navButtons.forEach((b) => b.classList.remove('active'));
     document.getElementById(target).classList.add('active');
     btn.classList.add('active');
+    navButtons.forEach((b) => b.setAttribute('aria-pressed', b.dataset.target === target));
     logAnalytics('screen_view', { screen: target });
     if (target === 'admin') {
       hydrateAdmin();
@@ -73,7 +79,25 @@ function hasAdminRole() {
 }
 
 function logAnalytics(event, metadata = {}) {
-  console.log('[analytics]', event, metadata);
+  const payload = { event, metadata, at: new Date().toISOString(), user: currentUser.name };
+  analyticsBuffer.push(payload);
+  console.log('[analytics]', payload);
+  if (navigator.sendBeacon) {
+    const blob = new Blob([JSON.stringify(payload)], { type: 'application/json' });
+    navigator.sendBeacon('/analytics', blob);
+  }
+}
+
+document.addEventListener('marai:api-error', (event) => {
+  logAnalytics('api_failure', event.detail || {});
+});
+
+function applyReducedMotion(enabled) {
+  document.body.classList.toggle('reduced-motion', enabled);
+  if (enabled) {
+    document.documentElement.style.setProperty('--motion-snap', 'linear');
+    document.documentElement.style.setProperty('--motion-spring', 'linear');
+  }
 }
 
 function updateQueueUI(queue = getRetryQueue()) {
@@ -153,15 +177,19 @@ const persistThemeBtn = document.getElementById('persist-theme');
 authForm.addEventListener('submit', (e) => {
   e.preventDefault();
   authStatus.textContent = 'Authenticating…';
+  logAnalytics('onboarding_flow', { step: 'login_submit' });
   guardedJob('Login', () => simulateApi('/api/auth/login')).then(() => {
     authStatus.textContent = 'Session created + profile bootstrapped';
+    logAnalytics('onboarding_complete', { method: 'login' });
   });
 });
 
 registerBtn.addEventListener('click', () => {
   authStatus.textContent = 'Registering new session…';
+  logAnalytics('onboarding_flow', { step: 'register' });
   guardedJob('Registration', () => simulateApi('/api/auth/register')).then(() => {
     authStatus.textContent = 'Registered + bootstrap payload returned';
+    logAnalytics('onboarding_complete', { method: 'register' });
   });
 });
 
@@ -175,6 +203,7 @@ avatarUpload.addEventListener('change', (e) => {
 document.getElementById('generate-avatar').addEventListener('click', () => {
   avatarStatus.textContent = 'Submitting generation…';
   avatarProgress.style.width = '18%';
+  logAnalytics('generation_trigger', { type: 'avatar' });
   guardedJob(
     'Avatar render',
     () =>
@@ -303,34 +332,47 @@ const sampleFeed = [
   },
 ];
 
+const virtualFeed = Array.from({ length: 60 }, (_, index) => {
+  const base = sampleFeed[index % sampleFeed.length];
+  return { ...base, id: `${base.id}-${index + 1}`, reactions: base.reactions + index, comments: base.comments + index };
+});
+
+let disconnectFeedVirtualizer = null;
+
 function renderFeed() {
-  const hash = JSON.stringify(sampleFeed);
+  const hash = JSON.stringify(virtualFeed.map((p) => `${p.id}:${p.reactions}:${p.comments}`));
   if (renderCache.get('feed') === hash) return;
   renderCache.set('feed', hash);
   feedList.innerHTML = '';
-  sampleFeed.forEach((post) => {
-    const card = document.createElement('div');
-    card.className = 'feed-card';
-    card.innerHTML = `
-      <div class="feed-header">
-        <div class="avatar-ring" aria-hidden="true"></div>
-        <div>
-          <p class="eyebrow">${post.persona}</p>
-          <h3>${post.author}</h3>
+  disconnectFeedVirtualizer?.();
+  disconnectFeedVirtualizer = virtualizeList(
+    feedList,
+    virtualFeed,
+    (post) => {
+      const card = document.createElement('div');
+      card.className = 'feed-card';
+      card.innerHTML = `
+        <div class="feed-header">
+          <img class="avatar-ring" src="${resolveCdnPath('/avatars/default.png')}" loading="lazy" alt="${post.author} avatar" />
+          <div>
+            <p class="eyebrow">${post.persona}</p>
+            <h3>${post.author}</h3>
+          </div>
+          <span class="badge">${post.type}</span>
         </div>
-        <span class="badge">${post.type}</span>
-      </div>
-      <p class="lede">${post.text}</p>
-      <div class="feed-actions">
-        <button class="ghost react" data-id="${post.id}">React</button>
-        <button class="ghost comment" data-id="${post.id}">Comment</button>
-        <button class="ghost regen" data-id="${post.id}">Regenerate</button>
-        <button class="ghost dream" data-id="${post.id}">Dream</button>
-        <span class="count" aria-live="polite">❤️ ${post.reactions} · 💬 ${post.comments}</span>
-      </div>
-    `;
-    feedList.appendChild(card);
-  });
+        <p class="lede">${post.text}</p>
+        <div class="feed-actions">
+          <button class="ghost react" data-id="${post.id}" aria-label="React to ${post.author}">React</button>
+          <button class="ghost comment" data-id="${post.id}" aria-label="Comment on ${post.author}">Comment</button>
+          <button class="ghost regen" data-id="${post.id}" aria-label="Regenerate ${post.author} post">Regenerate</button>
+          <button class="ghost dream" data-id="${post.id}" aria-label="Dream with ${post.author}">Dream</button>
+          <span class="count" aria-live="polite">❤️ ${post.reactions} · 💬 ${post.comments}</span>
+        </div>
+      `;
+      return card;
+    },
+    { batchSize: 8, overscan: 2 }
+  );
 }
 
 feedList.addEventListener('click', (e) => {
@@ -346,6 +388,7 @@ feedList.addEventListener('click', (e) => {
     : btn.classList.contains('regen')
     ? '/api/post/regenerate'
     : '/api/post/dream';
+  logAnalytics('feed_action', { action, postId: id });
   btn.textContent = '…optimistic';
   simulateApi(`${action}/${id}`)
     .then(() => {
@@ -397,24 +440,33 @@ const chatInput = document.getElementById('chat-input');
 const quickScene = document.getElementById('quick-scene');
 const moodDigest = document.getElementById('mood-digest');
 const toneSelect = document.getElementById('voice-tone');
+let chatHistory = loadChatHistory(currentUser.name).data || [];
 
-function pushMessage(sender, text) {
+function pushMessage(sender, text, skipPersist = false) {
   const bubble = document.createElement('div');
   bubble.className = `chat-bubble ${sender === 'ai' ? 'ai' : ''}`;
   bubble.textContent = text;
   chatWindow.appendChild(bubble);
   chatWindow.scrollTop = chatWindow.scrollHeight;
+  if (!skipPersist) {
+    chatHistory.push({ sender, text });
+    persistChatHistory(currentUser.name, chatHistory.slice(-50));
+  }
 }
+
+chatHistory.forEach((entry) => pushMessage(entry.sender, entry.text, true));
 
 chatForm.addEventListener('submit', (e) => {
   e.preventDefault();
   const message = chatInput.value.trim();
   if (!message) return;
+  logAnalytics('chat_message', { type: 'user', tone: toneSelect.value });
   pushMessage('user', message);
   chatInput.value = '';
   pushMessage('ai', 'Typing…');
   simulateApi('/api/chat/messages', { message, tone: toneSelect.value }).then(() => {
     chatWindow.lastChild.textContent = `RenAI: ${message} → Let me weave that into a scene.`;
+    logAnalytics('chat_reply', { request: message });
   });
 });
 
@@ -423,6 +475,7 @@ quickScene.addEventListener('click', () => {
   pushMessage('ai', 'Scene generation started…');
   simulateStreamingProgress({ style: { width: 0 } }, [25, 50, 75, 100]).then(() => {
     chatWindow.lastChild.textContent = 'Scene ready with neon rain (job #42).';
+    logAnalytics('generation_trigger', { type: 'quick_scene' });
   });
 });
 
@@ -431,6 +484,7 @@ moodDigest.addEventListener('click', () => {
   pushMessage('ai', 'Digesting mood…');
   simulateApi('/api/chat/mood-digest').then(() => {
     chatWindow.lastChild.textContent = 'Mood: calm curiosity with bright moments.';
+    logAnalytics('generation_trigger', { type: 'mood_digest' });
   });
 });
 
@@ -665,6 +719,7 @@ function toggleFollow(id) {
   renderFollowAndInnerCircle();
   renderMemory();
   renderAiChatRules();
+  logAnalytics('social_follow_toggle', { id, following: conn.youFollow, friend: isFriendNow });
 }
 
 function toggleInner(id) {
@@ -673,6 +728,7 @@ function toggleInner(id) {
   conn.youInner = !conn.youInner;
   renderFollowAndInnerCircle();
   renderAiChatRules();
+  logAnalytics('social_inner_circle', { id, inner: conn.youInner });
 }
 
 followGrid.addEventListener('click', (e) => {
