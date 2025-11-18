@@ -2,6 +2,7 @@ import React from "react";
 import { useTheme, ThemeVariant } from "../providers/ThemeProvider";
 import { useSession } from "../providers/SessionProvider";
 import { useToasts } from "./ToastHub";
+import { NotificationsBell } from "./NotificationsBell";
 
 type NavItem = { href: string; label: string; section: string };
 
@@ -34,6 +35,7 @@ export function TopBar({ navItems }: TopBarProps) {
         </nav>
       </div>
       <div className="top-bar__actions">
+        <NotificationsBell />
         <div className="theme-toggle">
           {themes.map((variant) => (
             <button
