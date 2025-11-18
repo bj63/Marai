@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html class="dark" lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta content="width=device-width, initial-scale=1.0" name="viewport" />
+    <title>Sign in to MarAI</title>
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <link
+      href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&display=swap"
+      rel="stylesheet"
+    />
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined" rel="stylesheet" />
+    <script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              primary: "#ee2bcd",
+              "background-light": "#f8f6f8",
+              "background-dark": "#22101f",
+            },
+            fontFamily: {
+              display: ["Space Grotesk", "sans-serif"],
+            },
+          },
+        },
+      };
+    </script>
+  </head>
+  <body class="bg-background-light dark:bg-background-dark font-display">
+    <div class="min-h-screen flex flex-col">
+      <header class="flex items-center p-4 gap-2">
+        <a href="landing.html" class="text-primary font-semibold flex items-center gap-1">
+          <span class="material-symbols-outlined">arrow_back</span>
+          Back
+        </a>
+      </header>
+      <main class="flex-1 w-full max-w-xl mx-auto px-4 pb-10 flex flex-col gap-6">
+        <div class="text-center space-y-2">
+          <p class="text-sm text-white/60">Welcome to</p>
+          <h1 class="text-3xl font-bold text-white">MarAI</h1>
+          <p class="text-base text-white/70">Authenticate to start crafting your persona.</p>
+        </div>
+
+        <section class="space-y-4">
+          <div id="login" class="bg-white/5 border border-white/10 rounded-2xl p-5 space-y-3">
+            <div class="flex items-center justify-between">
+              <h2 class="text-lg font-semibold text-white">Email + Password</h2>
+              <span class="text-xs text-white/60">/api/auth/login</span>
+            </div>
+            <form id="login-form" class="space-y-3">
+              <label class="flex flex-col gap-1 text-sm text-white/80">
+                Email
+                <input id="login-email" type="email" required class="rounded-xl bg-white/10 border border-white/20 px-3 py-2" />
+              </label>
+              <label class="flex flex-col gap-1 text-sm text-white/80">
+                Password
+                <input
+                  id="login-password"
+                  type="password"
+                  minlength="6"
+                  required
+                  class="rounded-xl bg-white/10 border border-white/20 px-3 py-2"
+                />
+              </label>
+              <button
+                type="submit"
+                class="w-full rounded-full bg-primary text-white font-bold h-12 flex items-center justify-center gap-2"
+              >
+                Sign In
+              </button>
+              <p id="login-status" class="text-sm text-white/60">Waiting to submit.</p>
+            </form>
+          </div>
+
+          <div class="bg-white/5 border border-white/10 rounded-2xl p-5 space-y-3">
+            <div class="flex items-center justify-between">
+              <h2 class="text-lg font-semibold text-white">Create Account</h2>
+              <span class="text-xs text-white/60">/api/auth/register</span>
+            </div>
+            <form id="register-form" class="space-y-3">
+              <label class="flex flex-col gap-1 text-sm text-white/80">
+                Email
+                <input id="register-email" type="email" required class="rounded-xl bg-white/10 border border-white/20 px-3 py-2" />
+              </label>
+              <label class="flex flex-col gap-1 text-sm text-white/80">
+                Password
+                <input
+                  id="register-password"
+                  type="password"
+                  minlength="6"
+                  required
+                  class="rounded-xl bg-white/10 border border-white/20 px-3 py-2"
+                />
+              </label>
+              <button
+                type="submit"
+                class="w-full rounded-full bg-white text-black font-bold h-12 flex items-center justify-center gap-2"
+              >
+                Create Account
+              </button>
+              <p id="register-status" class="text-sm text-white/60">No registration started.</p>
+            </form>
+          </div>
+
+          <div class="bg-white/5 border border-white/10 rounded-2xl p-5 space-y-3">
+            <div class="flex items-center justify-between">
+              <h2 class="text-lg font-semibold text-white">Magic Link</h2>
+              <span class="text-xs text-white/60">/api/auth/login</span>
+            </div>
+            <form id="magic-form" class="space-y-3">
+              <label class="flex flex-col gap-1 text-sm text-white/80">
+                Email
+                <input id="magic-email" type="email" required class="rounded-xl bg-white/10 border border-white/20 px-3 py-2" />
+              </label>
+              <button
+                type="submit"
+                class="w-full rounded-full bg-gradient-to-r from-primary to-purple-600 text-white font-bold h-12 flex items-center justify-center gap-2"
+              >
+                Send Magic Link
+              </button>
+              <p id="magic-status" class="text-sm text-white/60">No link requested.</p>
+            </form>
+          </div>
+        </section>
+      </main>
+    </div>
+
+    <script src="shared.js"></script>
+    <script>
+      const loginForm = document.getElementById('login-form');
+      const registerForm = document.getElementById('register-form');
+      const magicForm = document.getElementById('magic-form');
+      const loginStatus = document.getElementById('login-status');
+      const registerStatus = document.getElementById('register-status');
+      const magicStatus = document.getElementById('magic-status');
+
+      async function handleAuth(endpoint, payload, statusNode, successMessage) {
+        const restore = optimisticState(statusNode, 'Submitting…');
+        statusNode.textContent = 'Submitting…';
+        try {
+          const result = await apiRequest(endpoint, { method: 'POST', body: payload });
+          persistTokens(result.tokens);
+          statusNode.textContent = 'Loading profile…';
+          const profile = await apiRequest('/api/profile');
+          persistProfile(profile);
+          statusNode.textContent = successMessage || 'Authenticated!';
+          showToast(successMessage || 'Authenticated', 'success');
+          setTimeout(() => {
+            window.location.href = 'avatar-creator.html';
+          }, 700);
+        } catch (error) {
+          statusNode.textContent = error.message;
+          showToast(error.message, 'error');
+        } finally {
+          restore();
+        }
+      }
+
+      loginForm.addEventListener('submit', (event) => {
+        event.preventDefault();
+        handleAuth('/api/auth/login', {
+          email: document.getElementById('login-email').value,
+          password: document.getElementById('login-password').value,
+        }, loginStatus, 'Signed in!');
+      });
+
+      registerForm.addEventListener('submit', (event) => {
+        event.preventDefault();
+        handleAuth('/api/auth/register', {
+          email: document.getElementById('register-email').value,
+          password: document.getElementById('register-password').value,
+        }, registerStatus, 'Account created!');
+      });
+
+      magicForm.addEventListener('submit', (event) => {
+        event.preventDefault();
+        handleAuth('/api/auth/login', {
+          email: document.getElementById('magic-email').value,
+          magic: true,
+        }, magicStatus, 'Magic link accepted');
+      });
+    </script>
+  </body>
+</html>

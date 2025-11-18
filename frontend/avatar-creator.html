@@ -119,6 +119,7 @@
       </div>
     </div>
 
+    <script src="shared.js"></script>
     <script>
       const styleButtons = Array.from(document.querySelectorAll(".style-chip"));
       const photoInput = document.getElementById("photo-input");
@@ -126,6 +127,17 @@
       const generateBtn = document.getElementById("generate-btn");
       const ctaStatus = document.getElementById("cta-status");
       const previewSlot = document.getElementById("preview-slot");
+
+      let currentJobId = null;
+      let pollTimer = null;
+
+      function selectStyle(button) {
+        styleButtons.forEach((other) => other.classList.remove("active", "bg-primary", "text-white"));
+        styleButtons.forEach((other) => other.classList.add("bg-white/5", "text-black", "dark:text-white"));
+        button.classList.add("active", "bg-primary", "text-white");
+        button.classList.remove("bg-white/5", "text-black", "dark:text-white");
+        ctaStatus.textContent = `Style selected: ${button.textContent.trim()}`;
+      }
 
       styleButtons.forEach((btn) => {
         btn.classList.add(
@@ -147,13 +159,7 @@
           "dark:text-white"
         );
 
-        btn.addEventListener("click", () => {
-          styleButtons.forEach((other) => other.classList.remove("active", "bg-primary", "text-white"));
-          styleButtons.forEach((other) => other.classList.add("bg-white/5", "text-black", "dark:text-white"));
-          btn.classList.add("active", "bg-primary", "text-white");
-          btn.classList.remove("bg-white/5", "text-black", "dark:text-white");
-          ctaStatus.textContent = `Style selected: ${btn.textContent.trim()}`;
-        });
+        btn.addEventListener("click", () => selectStyle(btn));
       });
 
       photoInput.addEventListener("change", (event) => {
@@ -169,19 +175,66 @@
         }
       });
 
-      generateBtn.addEventListener("click", () => {
+      async function pollAvatar(jobId, attempt = 0) {
+        pollTimer = setTimeout(async () => {
+          try {
+            const result = await apiRequest(`/api/avatar/${jobId}`);
+            if (result.status === 'succeeded') {
+              ctaStatus.textContent = 'Avatar ready!';
+              previewSlot.innerHTML = `<img src="${result.url || '/placeholder-avatar.png'}" alt="Generated avatar" class="rounded-xl max-h-72 object-cover" />`;
+              showToast('Avatar generated successfully', 'success');
+              generateBtn.disabled = false;
+              generateBtn.textContent = 'Generate Another Avatar';
+              return;
+            }
+            if (attempt > 4) {
+              throw new Error('Generation taking too long');
+            }
+            ctaStatus.textContent = `Polling status… (${attempt + 1})`;
+            pollAvatar(jobId, attempt + 1);
+          } catch (error) {
+            generateBtn.disabled = false;
+            ctaStatus.textContent = 'Generation failed — tap to retry';
+            showToast(error.message || 'Avatar generation failed', 'error');
+          }
+        }, 900);
+      }
+
+      async function startGeneration() {
         if (!photoInput.files?.length) {
           ctaStatus.textContent = "Please upload a photo first";
+          showToast('Upload a photo to continue', 'error');
           return;
         }
-        generateBtn.disabled = true;
-        generateBtn.classList.add("opacity-80");
-        ctaStatus.textContent = "Generating avatar…";
-        setTimeout(() => {
-          ctaStatus.textContent = "Avatar generated and saved!";
-          generateBtn.disabled = false;
-          generateBtn.classList.remove("opacity-80");
-        }, 1200);
+        if (pollTimer) clearTimeout(pollTimer);
+
+        const formData = new FormData();
+        formData.append('photo', photoInput.files[0]);
+        const selectedStyle = styleButtons.find((btn) => btn.classList.contains('active'))?.textContent?.trim();
+        if (selectedStyle) formData.append('style', selectedStyle.toLowerCase());
+
+        const reset = optimisticState(generateBtn, 'Sending…', 'Generate Avatar');
+        ctaStatus.textContent = 'Submitting to /api/avatar/generate…';
+        try {
+          const { id } = await apiRequest('/api/avatar/generate', { method: 'POST', body: formData });
+          currentJobId = id;
+          ctaStatus.textContent = 'Job queued — polling for updates';
+          showToast('Avatar generation started', 'success');
+          pollAvatar(id);
+        } catch (error) {
+          ctaStatus.textContent = error.message || 'Unable to start generation';
+          showToast(error.message || 'Generation failed', 'error');
+          reset();
+        }
+      }
+
+      generateBtn.addEventListener("click", startGeneration);
+
+      previewSlot.addEventListener('click', () => {
+        if (currentJobId) {
+          showToast('Retrying generation…');
+          startGeneration();
+        }
       });
     </script>
   </body>
