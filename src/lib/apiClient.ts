@@ -31,6 +31,10 @@ function normalizeError(status: number, payload: any): NormalizedError {
   return { status, message, details: payload?.details ?? payload };
 }
 
+function hasHeader(headers: Record<string, string>, name: string) {
+  return Object.keys(headers).some((key) => key.toLowerCase() === name.toLowerCase());
+}
+
 export async function apiClient<T>(path: string, options: ApiClientOptions = {}): Promise<T> {
   const { method = "GET", headers = {}, body, retry = DEFAULT_RETRY } = options;
   const attempts = retry.attempts ?? DEFAULT_RETRY.attempts;
@@ -42,11 +46,11 @@ export async function apiClient<T>(path: string, options: ApiClientOptions = {})
     ...headers,
   };
 
-  if (!(body instanceof FormData)) {
+  if (!(body instanceof FormData) && !hasHeader(headers, "Content-Type")) {
     finalHeaders["Content-Type"] = "application/json";
   }
 
-  if (API_KEY) {
+  if (API_KEY && !hasHeader(headers, "Authorization")) {
     finalHeaders.Authorization = `Bearer ${API_KEY}`;
   }
 
