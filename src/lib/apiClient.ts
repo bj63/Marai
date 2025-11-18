@@ -39,9 +39,12 @@ export async function apiClient<T>(path: string, options: ApiClientOptions = {})
   const url = path.startsWith("http") ? path : `${API_BASE_URL}${path}`;
   const finalHeaders: Record<string, string> = {
     Accept: "application/json",
-    "Content-Type": "application/json",
     ...headers,
   };
+
+  if (!(body instanceof FormData)) {
+    finalHeaders["Content-Type"] = "application/json";
+  }
 
   if (API_KEY) {
     finalHeaders.Authorization = `Bearer ${API_KEY}`;
@@ -54,7 +57,7 @@ export async function apiClient<T>(path: string, options: ApiClientOptions = {})
       const response = await fetch(url, {
         method,
         headers: finalHeaders,
-        body: body ? JSON.stringify(body) : undefined,
+        body: body instanceof FormData ? body : body ? JSON.stringify(body) : undefined,
       });
 
       if (!response.ok) {

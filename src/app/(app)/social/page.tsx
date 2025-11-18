@@ -146,6 +146,12 @@ export default function SocialGraphPage() {
   const [innerCircle, setInnerCircle] = useState<Set<string>>(new Set());
   const [hovered, setHovered] = useState<string | null>(null);
   const [carouselIndex, setCarouselIndex] = useState(0);
+  const [avatarStyle, setAvatarStyle] = useState("dream");
+  const [avatarFile, setAvatarFile] = useState<File | null>(null);
+  const [avatarStatus, setAvatarStatus] = useState<string>("idle");
+  const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
+  const avatarJobRef = useRef<string | null>(null);
+  const avatarPollRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const viewerLabel = profile?.displayName ?? "You";
   const edges = graph.edges ?? [];
 
@@ -174,6 +180,12 @@ export default function SocialGraphPage() {
       cancelled = true;
     };
   }, [addToast]);
+
+  useEffect(() => {
+    return () => {
+      if (avatarPollRef.current) clearInterval(avatarPollRef.current);
+    };
+  }, []);
 
   const positionedNodes = useMemo<PositionedNode[]>(() => {
     const nodes = graph.nodes?.length ? graph.nodes : FALLBACK_GRAPH.nodes;
@@ -210,6 +222,70 @@ export default function SocialGraphPage() {
   }, [positionedNodes, selectedId]);
 
   const isFriend = (node?: SocialGraphNode) => Boolean(node?.youFollow && node?.followsYou);
+
+  const pollAvatarJob = useCallback(
+    (jobId: string) => {
+      if (avatarPollRef.current) clearInterval(avatarPollRef.current);
+      avatarJobRef.current = jobId;
+      setAvatarStatus("processing job…");
+
+      avatarPollRef.current = setInterval(async () => {
+        try {
+          const response = await apiClient<{ status: string; url?: string; error?: string }>(`/api/avatar/${jobId}`);
+          if (response.status === "succeeded" && response.url) {
+            setAvatarPreview(response.url);
+            setAvatarStatus("Avatar ready");
+            addToast({ title: "Avatar ready", tone: "success" });
+            avatarPollRef.current && clearInterval(avatarPollRef.current);
+          }
+          if (response.status === "failed") {
+            setAvatarStatus(response.error || "Avatar job failed");
+            addToast({ title: "Avatar generation failed", tone: "error" });
+            avatarPollRef.current && clearInterval(avatarPollRef.current);
+          }
+        } catch (error: any) {
+          setAvatarStatus(error?.message || "Unable to check avatar job");
+          addToast({ title: "Avatar polling error", tone: "error" });
+          avatarPollRef.current && clearInterval(avatarPollRef.current);
+        }
+      }, 1500);
+    },
+    [addToast],
+  );
+
+  const submitAvatarJob = useCallback(async () => {
+    if (!avatarFile) {
+      addToast({ title: "Upload a reference first", tone: "warning" });
+      return;
+    }
+
+    const formData = new FormData();
+    formData.append("file", avatarFile);
+    formData.append("style", avatarStyle);
+
+    try {
+      setAvatarStatus("Submitting avatar…");
+      const response = await apiClient<{ id: string }>("/api/avatar/generate", {
+        method: "POST",
+        body: formData,
+      });
+      setAvatarStatus("Queued for rendering");
+      addToast({ title: "Avatar generation started", tone: "info" });
+      pollAvatarJob(response.id);
+    } catch (error: any) {
+      setAvatarStatus(error?.message || "Unable to submit avatar");
+      addToast({ title: "Avatar request failed", tone: "error" });
+    }
+  }, [addToast, avatarFile, avatarStyle, pollAvatarJob]);
+
+  const retryAvatarJob = useCallback(() => {
+    if (avatarJobRef.current) {
+      pollAvatarJob(avatarJobRef.current);
+      addToast({ title: "Retrying avatar status", tone: "info" });
+      return;
+    }
+    submitAvatarJob();
+  }, [pollAvatarJob, submitAvatarJob]);
 
   const toggleFollow = async (nodeId: string) => {
     const node = graph.nodes.find((n) => n.id === nodeId);
@@ -325,6 +401,37 @@ export default function SocialGraphPage() {
         </div>
 
         <div className="social-grid">
+          <div className="panel-card">
+            <p className="eyebrow">Avatar generation</p>
+            <h3>POST /api/avatar/generate</h3>
+            <p className="muted">Uploads use your API key from .env and stream progress via polling.</p>
+            <div className="input-row">
+              <label className="file-input">
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={(e) => setAvatarFile(e.target.files?.[0] ?? null)}
+                />
+                <span>{avatarFile ? avatarFile.name : "Upload reference"}</span>
+              </label>
+              <select value={avatarStyle} onChange={(e) => setAvatarStyle(e.target.value)}>
+                <option value="dream">Dream</option>
+                <option value="cyberpunk">Cyberpunk</option>
+                <option value="studio">Studio</option>
+              </select>
+            </div>
+            <div className="button-row">
+              <button className="button" onClick={submitAvatarJob}>
+                Generate avatar
+              </button>
+              <button className="button ghost" onClick={retryAvatarJob}>
+                Retry status
+              </button>
+            </div>
+            <p className="muted">{avatarStatus}</p>
+            {avatarPreview && <img src={avatarPreview} alt="Generated avatar" className="avatar-preview" />}
+          </div>
+
           <div className="panel-card">
             <div className="social-graph__header">
               <div>

@@ -181,6 +181,7 @@ export default function ChatPage({ params }: { params: { maraiId: string } }) {
 
         source.onerror = () => {
           setStreamError("Stream dropped. Retry?");
+          addToast({ title: "Chat stream dropped", tone: "warning" });
           finalizeAssistant(assistantId, "Stream interrupted");
           source.close();
           streamingRef.current = null;
@@ -210,6 +211,7 @@ export default function ChatPage({ params }: { params: { maraiId: string } }) {
 
       socket.onerror = () => {
         setStreamError("Stream dropped. Retry?");
+        addToast({ title: "Chat stream dropped", tone: "warning" });
         finalizeAssistant(assistantId, "Stream interrupted");
         socket.close();
         streamingRef.current = null;
@@ -271,6 +273,7 @@ export default function ChatPage({ params }: { params: { maraiId: string } }) {
     );
     setStreamError(null);
     startStream(assistantId);
+    addToast({ title: "Retrying chat stream", tone: "info" });
   }, [messages, startStream]);
 
   const requestMoodDigest = async () => {

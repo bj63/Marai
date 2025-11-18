@@ -168,9 +168,14 @@ export default function FeedPage() {
           updated[idx] = nextPost;
           return updated;
         });
+        addToast({ title: `${action} applied`, tone: "success" });
       } catch (error) {
         setPosts(snapshot);
-        addToast({ title: `Unable to ${action} post`, tone: "error" });
+        addToast({
+          title: `Unable to ${action} post`,
+          description: "Rolled back optimistic update",
+          tone: "error",
+        });
       }
     },
     [addToast]

@@ -1,4 +1,5 @@
 import React from "react";
+import { apiClient } from "../../../lib/apiClient";
 import { useSession } from "../../../providers/SessionProvider";
 import { useToasts } from "../../../components/ToastHub";
 
@@ -7,11 +8,20 @@ export default function LoginPage() {
   const { addToast } = useToasts();
 
   const handleLogin = async () => {
-    addToast({ title: "Logging in...", tone: "info" });
-    // In a real app, call auth endpoint then refresh session state.
-    setStatus("authenticated");
-    await refresh();
-    addToast({ title: "Welcome back!", tone: "success" });
+    try {
+      addToast({ title: "Logging in…", tone: "info" });
+      await apiClient("/api/auth/login", { method: "POST" });
+      setStatus("authenticated");
+      await refresh();
+      addToast({ title: "Welcome back!", tone: "success" });
+    } catch (error: any) {
+      addToast({
+        title: "Login failed",
+        description: error?.message || "Check API keys in your .env",
+        tone: "error",
+      });
+      setStatus("error");
+    }
   };
 
   return (
