@@ -1,13 +1,171 @@
 const panels = document.querySelectorAll('.panel');
 const navButtons = document.querySelectorAll('.nav-btn');
-navButtons.forEach((btn) =>
+const renderCache = new Map();
+const featureFlags = runtimeConfig.featureFlags;
+
+const currentUser = {
+  name: runtimeConfig.currentUserName || 'Lyra Ops',
+  roles: runtimeConfig.roles.length ? runtimeConfig.roles : ['member'],
+};
+
+const analyticsBuffer = [];
+const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
+applyReducedMotion(prefersReducedMotion.matches);
+prefersReducedMotion.addEventListener('change', (event) => applyReducedMotion(event.matches));
+
+const offlineBanner = document.getElementById('offline-banner');
+const retryQueuedBtn = document.getElementById('retry-queued');
+const retryQueueStatus = document.getElementById('retry-queue-status');
+const retryQueueList = document.getElementById('retry-queue-list');
+
+const helperFlagStatus = document.getElementById('flag-status');
+const helperFlagBrand = document.getElementById('flag-brand-hub');
+const helperFlagAdmin = document.getElementById('flag-admin-panel');
+
+applyFeatureFlags();
+updateQueueUI();
+
+navButtons.forEach((btn) => {
+  btn.setAttribute('aria-controls', btn.dataset.target);
   btn.addEventListener('click', () => {
+    const target = btn.dataset.target;
+    if (!isSectionEnabled(target)) {
+      helperFlagStatus.textContent = `${target} disabled by feature flag`;
+      showToast(`${target} is disabled by feature flag`, 'error');
+      logAnalytics('screen_blocked', { screen: target, reason: 'feature_flag' });
+      return;
+    }
+    if (target === 'admin' && !hasAdminRole()) {
+      document.getElementById('admin-status').textContent = 'Access denied: admin role required';
+      showToast('Admin role required', 'error');
+      logAnalytics('screen_blocked', { screen: 'admin', reason: 'role_guard' });
+      return;
+    }
     panels.forEach((p) => p.classList.remove('active'));
     navButtons.forEach((b) => b.classList.remove('active'));
-    document.getElementById(btn.dataset.target).classList.add('active');
+    document.getElementById(target).classList.add('active');
     btn.classList.add('active');
-  })
-);
+    navButtons.forEach((b) => b.setAttribute('aria-pressed', b.dataset.target === target));
+    logAnalytics('screen_view', { screen: target });
+    if (target === 'admin') {
+      hydrateAdmin();
+    }
+  });
+});
+
+logAnalytics('screen_view', { screen: 'onboarding' });
+
+function applyFeatureFlags() {
+  document.getElementById('nav-brand-hub').style.display = featureFlags.brandHub ? '' : 'none';
+  document.getElementById('brand-hub').style.display = featureFlags.brandHub ? '' : 'none';
+  document.getElementById('nav-admin').style.display = featureFlags.adminPanel ? '' : 'none';
+  document.getElementById('admin').style.display = featureFlags.adminPanel ? '' : 'none';
+  helperFlagBrand.textContent = `Brand Hub: ${featureFlags.brandHub ? 'on' : 'off'}`;
+  helperFlagAdmin.textContent = `Admin: ${featureFlags.adminPanel ? 'on' : 'off'}`;
+  helperFlagStatus.textContent = 'Feature-gated navigation';
+}
+
+function isSectionEnabled(target) {
+  if (target === 'brand-hub') return featureFlags.brandHub;
+  if (target === 'admin') return featureFlags.adminPanel;
+  return true;
+}
+
+function hasAdminRole() {
+  return currentUser.roles.includes('admin');
+}
+
+function requireAdminGuard(statusNode) {
+  if (hasAdminRole()) return true;
+  const message = 'Access denied: admin role required';
+  statusNode.textContent = message;
+  showToast(message, 'error');
+  logAnalytics('admin_guard_block', { screen: 'admin' });
+  return false;
+}
+
+function logAnalytics(event, metadata = {}) {
+  const payload = { event, metadata, at: new Date().toISOString(), user: currentUser.name };
+  analyticsBuffer.push(payload);
+  console.log('[analytics]', payload);
+  if (navigator.sendBeacon) {
+    const blob = new Blob([JSON.stringify(payload)], { type: 'application/json' });
+    navigator.sendBeacon('/analytics', blob);
+  }
+}
+
+document.addEventListener('marai:api-error', (event) => {
+  logAnalytics('api_failure', event.detail || {});
+});
+
+function applyReducedMotion(enabled) {
+  document.body.classList.toggle('reduced-motion', enabled);
+  if (enabled) {
+    document.documentElement.style.setProperty('--motion-snap', 'linear');
+    document.documentElement.style.setProperty('--motion-spring', 'linear');
+  }
+}
+
+function updateQueueUI(queue = getRetryQueue()) {
+  if (!retryQueueStatus || !retryQueueList) return;
+  retryQueueList.innerHTML = '';
+  if (!queue.length) {
+    retryQueueStatus.textContent = 'No queued jobs';
+    return;
+  }
+  retryQueueStatus.textContent = `${queue.length} job(s) waiting`;
+  queue.forEach((job, idx) => {
+    const row = document.createElement('li');
+    row.className = 'stat-item';
+    row.textContent = `Job ${idx + 1} · pending retry`;
+    retryQueueList.appendChild(row);
+  });
+}
+
+function handleDrainQueue() {
+  drainRetryQueue().then(({ remaining }) => {
+    updateQueueUI(remaining);
+    if (remaining.length) {
+      showToast('Some jobs still need attention.', 'error');
+    } else {
+      showToast('Queued jobs retried.', 'success');
+    }
+  });
+}
+
+function handleNetworkChange(isOnline) {
+  if (!offlineBanner) return;
+  offlineBanner.classList.toggle('active', !isOnline);
+  offlineBanner.setAttribute('aria-hidden', isOnline);
+  if (!isOnline) {
+    showToast('Offline detected — actions will be queued.', 'error');
+  } else {
+    showToast('Back online — replaying queued actions.', 'success');
+    handleDrainQueue();
+  }
+}
+
+setupNetworkMonitoring(handleNetworkChange);
+lazyLoadMedia('img');
+retryQueuedBtn?.addEventListener('click', handleDrainQueue);
+window.addEventListener('unhandledrejection', (event) => {
+  event.preventDefault();
+  showToast(event.reason?.message || 'Request queued for retry', 'error');
+});
+
+function guardedJob(label, executor, onSuccess) {
+  return executor()
+    .then((res) => {
+      onSuccess?.(res);
+      return res;
+    })
+    .catch((error) => {
+      const queue = enqueueRetry(() => executor().then(onSuccess));
+      updateQueueUI(queue);
+      showToast(`${label} queued: ${error.message || 'Offline'}`, 'error', 'Retry now', handleDrainQueue);
+      throw error;
+    });
+}
 
 // Onboarding
 const authForm = document.getElementById('auth-form');
@@ -25,21 +183,49 @@ const persistThemeBtn = document.getElementById('persist-theme');
 authForm.addEventListener('submit', (e) => {
   e.preventDefault();
   authStatus.textContent = 'Authenticating…';
-  simulateApi('/api/auth/login').then(() => {
+  logAnalytics('onboarding_flow', { step: 'login_submit' });
+  let email;
+  let password;
+  try {
+    email = sanitizeInput(authForm.querySelector('input[type="email"]').value, { maxLength: 120 });
+    password = sanitizeInput(authForm.querySelector('input[type="password"]').value, {
+      maxLength: 72,
+    });
+  } catch (error) {
+    authStatus.textContent = error.message;
+    return;
+  }
+  guardedJob('Login', () => simulateApi('/api/auth/login', { email, password })).then(() => {
     authStatus.textContent = 'Session created + profile bootstrapped';
+    logAnalytics('onboarding_complete', { method: 'login' });
   });
 });
 
 registerBtn.addEventListener('click', () => {
   authStatus.textContent = 'Registering new session…';
-  simulateApi('/api/auth/register').then(() => {
+  logAnalytics('onboarding_flow', { step: 'register' });
+  let email;
+  try {
+    email = sanitizeInput(authForm.querySelector('input[type="email"]').value, { maxLength: 120 });
+  } catch (error) {
+    authStatus.textContent = error.message;
+    return;
+  }
+  guardedJob('Registration', () => simulateApi('/api/auth/register', { email })).then(() => {
     authStatus.textContent = 'Registered + bootstrap payload returned';
+    logAnalytics('onboarding_complete', { method: 'register' });
   });
 });
 
 avatarUpload.addEventListener('change', (e) => {
   const file = e.target.files?.[0];
   if (file) {
+    if (file.size > runtimeConfig.maxUploadBytes) {
+      avatarPreview.textContent = 'Upload blocked: file exceeds size limit';
+      showToast(`Max upload size is ${Math.round(runtimeConfig.maxUploadBytes / 1024 / 1024)}MB`, 'error');
+      avatarUpload.value = '';
+      return;
+    }
     avatarPreview.textContent = `Uploaded: ${file.name}`;
   }
 });
@@ -47,10 +233,22 @@ avatarUpload.addEventListener('change', (e) => {
 document.getElementById('generate-avatar').addEventListener('click', () => {
   avatarStatus.textContent = 'Submitting generation…';
   avatarProgress.style.width = '18%';
-  simulateStreamingProgress(avatarProgress, [18, 45, 70, 100]).then(() => {
-    avatarStatus.textContent = `Generated in ${avatarStyle.value} style`; 
-    avatarPreview.textContent = '✨ Avatar ready — live preview';
-  });
+  logAnalytics('generation_trigger', { type: 'avatar' });
+  guardedJob(
+    'Avatar render',
+    () =>
+      new Promise((resolve, reject) => {
+        if (!navigator.onLine) {
+          reject(new Error('Offline – queued'));
+          return;
+        }
+        simulateStreamingProgress(avatarProgress, [18, 45, 70, 100]).then(resolve);
+      }),
+    () => {
+      avatarStatus.textContent = `Generated in ${avatarStyle.value} style`;
+      avatarPreview.textContent = '✨ Avatar ready — live preview';
+    }
+  );
 });
 
 document.getElementById('retry-avatar').addEventListener('click', () => {
@@ -69,22 +267,22 @@ personaForm.addEventListener('submit', (e) => {
   e.preventDefault();
   personaStatus.textContent = 'Saving persona…';
   const payload = collectPersona();
-  simulateApi('/api/marai/persona', payload).then(() => {
+  guardedJob('Persona save', () => simulateApi('/api/marai/persona', payload)).then(() => {
     personaStatus.textContent = 'Persona + MarAI config persisted';
   });
 });
 
 persistThemeBtn.addEventListener('click', () => {
   personaStatus.textContent = 'Persisting theme + defaults…';
-  simulateApi('/api/profile').then(() => {
+  guardedJob('Theme persist', () => simulateApi('/api/profile')).then(() => {
     personaStatus.textContent = 'Theme saved to profile';
   });
 });
 
 function collectPersona() {
   return {
-    name: document.getElementById('persona-name').value,
-    description: document.getElementById('persona-desc').value,
+    name: sanitizeInput(document.getElementById('persona-name').value, { maxLength: 80 }),
+    description: sanitizeInput(document.getElementById('persona-desc').value, { maxLength: 280 }),
     traits: Object.fromEntries(
       [...personaForm.querySelectorAll('.slider-row')].map((row) => [
         row.dataset.trait,
@@ -94,10 +292,23 @@ function collectPersona() {
   };
 }
 
-function simulateApi(endpoint, payload = {}) {
+function simulateApi(endpoint, payload = {}, response = {}) {
+  if (!navigator.onLine) {
+    const queued = enqueueRetry(() => simulateApi(endpoint, payload, response));
+    updateQueueUI(queued);
+    showToast(`${endpoint} queued until back online`, 'error');
+    return Promise.reject(new Error('Offline – queued'));
+  }
+  const endpointUrl = resolveApiUrl(endpoint);
+  try {
+    assertCorsAllowed(endpointUrl);
+  } catch (error) {
+    showToast(error.message, 'error');
+    return Promise.reject(error);
+  }
   return new Promise((resolve) => {
-    console.log('Mock API', endpoint, payload);
-    setTimeout(resolve, 600);
+    console.log('Mock API', endpointUrl, payload);
+    setTimeout(() => resolve(response), 600);
   });
 }
 
@@ -158,31 +369,47 @@ const sampleFeed = [
   },
 ];
 
+const virtualFeed = Array.from({ length: 60 }, (_, index) => {
+  const base = sampleFeed[index % sampleFeed.length];
+  return { ...base, id: `${base.id}-${index + 1}`, reactions: base.reactions + index, comments: base.comments + index };
+});
+
+let disconnectFeedVirtualizer = null;
+
 function renderFeed() {
+  const hash = JSON.stringify(virtualFeed.map((p) => `${p.id}:${p.reactions}:${p.comments}`));
+  if (renderCache.get('feed') === hash) return;
+  renderCache.set('feed', hash);
   feedList.innerHTML = '';
-  sampleFeed.forEach((post) => {
-    const card = document.createElement('div');
-    card.className = 'feed-card';
-    card.innerHTML = `
-      <div class="feed-header">
-        <div class="avatar-ring" aria-hidden="true"></div>
-        <div>
-          <p class="eyebrow">${post.persona}</p>
-          <h3>${post.author}</h3>
+  disconnectFeedVirtualizer?.();
+  disconnectFeedVirtualizer = virtualizeList(
+    feedList,
+    virtualFeed,
+    (post) => {
+      const card = document.createElement('div');
+      card.className = 'feed-card';
+      card.innerHTML = `
+        <div class="feed-header">
+          <img class="avatar-ring" src="${resolveCdnPath('/avatars/default.png')}" loading="lazy" alt="${post.author} avatar" />
+          <div>
+            <p class="eyebrow">${post.persona}</p>
+            <h3>${post.author}</h3>
+          </div>
+          <span class="badge">${post.type}</span>
         </div>
-        <span class="badge">${post.type}</span>
-      </div>
-      <p class="lede">${post.text}</p>
-      <div class="feed-actions">
-        <button class="ghost react" data-id="${post.id}">React</button>
-        <button class="ghost comment" data-id="${post.id}">Comment</button>
-        <button class="ghost regen" data-id="${post.id}">Regenerate</button>
-        <button class="ghost dream" data-id="${post.id}">Dream</button>
-        <span class="count" aria-live="polite">❤️ ${post.reactions} · 💬 ${post.comments}</span>
-      </div>
-    `;
-    feedList.appendChild(card);
-  });
+        <p class="lede">${post.text}</p>
+        <div class="feed-actions">
+          <button class="ghost react" data-id="${post.id}" aria-label="React to ${post.author}">React</button>
+          <button class="ghost comment" data-id="${post.id}" aria-label="Comment on ${post.author}">Comment</button>
+          <button class="ghost regen" data-id="${post.id}" aria-label="Regenerate ${post.author} post">Regenerate</button>
+          <button class="ghost dream" data-id="${post.id}" aria-label="Dream with ${post.author}">Dream</button>
+          <span class="count" aria-live="polite">❤️ ${post.reactions} · 💬 ${post.comments}</span>
+        </div>
+      `;
+      return card;
+    },
+    { batchSize: 8, overscan: 2 }
+  );
 }
 
 feedList.addEventListener('click', (e) => {
@@ -198,12 +425,17 @@ feedList.addEventListener('click', (e) => {
     : btn.classList.contains('regen')
     ? '/api/post/regenerate'
     : '/api/post/dream';
+  logAnalytics('feed_action', { action, postId: id });
   btn.textContent = '…optimistic';
-  simulateApi(`${action}/${id}`).then(() => {
-    btn.textContent = btn.textContent.replace('…optimistic', 'Done');
-    post.reactions += 1;
-    renderFeed();
-  });
+  simulateApi(`${action}/${id}`)
+    .then(() => {
+      btn.textContent = btn.textContent.replace('…optimistic', 'Done');
+      post.reactions += 1;
+      renderFeed();
+    })
+    .catch(() => {
+      btn.textContent = 'Retry queued';
+    });
 });
 
 renderFeed();
@@ -245,24 +477,39 @@ const chatInput = document.getElementById('chat-input');
 const quickScene = document.getElementById('quick-scene');
 const moodDigest = document.getElementById('mood-digest');
 const toneSelect = document.getElementById('voice-tone');
+let chatHistory = loadChatHistory(currentUser.name).data || [];
 
-function pushMessage(sender, text) {
+function pushMessage(sender, text, skipPersist = false) {
   const bubble = document.createElement('div');
   bubble.className = `chat-bubble ${sender === 'ai' ? 'ai' : ''}`;
   bubble.textContent = text;
   chatWindow.appendChild(bubble);
   chatWindow.scrollTop = chatWindow.scrollHeight;
+  if (!skipPersist) {
+    chatHistory.push({ sender, text });
+    persistChatHistory(currentUser.name, chatHistory.slice(-50));
+  }
 }
+
+chatHistory.forEach((entry) => pushMessage(entry.sender, entry.text, true));
 
 chatForm.addEventListener('submit', (e) => {
   e.preventDefault();
-  const message = chatInput.value.trim();
+  let message = '';
+  try {
+    message = sanitizeInput(chatInput.value, { maxLength: 240 });
+  } catch (error) {
+    showToast(error.message, 'error');
+    return;
+  }
   if (!message) return;
+  logAnalytics('chat_message', { type: 'user', tone: toneSelect.value });
   pushMessage('user', message);
   chatInput.value = '';
   pushMessage('ai', 'Typing…');
   simulateApi('/api/chat/messages', { message, tone: toneSelect.value }).then(() => {
     chatWindow.lastChild.textContent = `RenAI: ${message} → Let me weave that into a scene.`;
+    logAnalytics('chat_reply', { request: message });
   });
 });
 
@@ -271,6 +518,7 @@ quickScene.addEventListener('click', () => {
   pushMessage('ai', 'Scene generation started…');
   simulateStreamingProgress({ style: { width: 0 } }, [25, 50, 75, 100]).then(() => {
     chatWindow.lastChild.textContent = 'Scene ready with neon rain (job #42).';
+    logAnalytics('generation_trigger', { type: 'quick_scene' });
   });
 });
 
@@ -279,6 +527,7 @@ moodDigest.addEventListener('click', () => {
   pushMessage('ai', 'Digesting mood…');
   simulateApi('/api/chat/mood-digest').then(() => {
     chatWindow.lastChild.textContent = 'Mood: calm curiosity with bright moments.';
+    logAnalytics('generation_trigger', { type: 'mood_digest' });
   });
 });
 
@@ -433,23 +682,28 @@ function renderMemory() {
   });
 }
 
+function evaluateFriendAiGate(conn) {
+  const friend = conn.youFollow && conn.followsYou;
+  const innerCircle = friend && conn.youInner && conn.theyInner;
+  const allowed =
+    friend &&
+    innerCircle &&
+    conn.aiChatOptIn &&
+    aiChatSettings.youAllowFriendAiChat;
+  const blockReason = !friend
+    ? 'Not friends yet'
+    : !(conn.youInner && conn.theyInner)
+    ? 'Both must add to Inner Circle'
+    : !aiChatSettings.youAllowFriendAiChat || !conn.aiChatOptIn
+    ? 'One side disabled Friend AI chat'
+    : '';
+  return { allowed, blockReason, friend, innerCircle };
+}
+
 function renderAiChatRules() {
   aiChatRules.innerHTML = '';
   socialConnections.forEach((conn) => {
-    const friend = conn.youFollow && conn.followsYou;
-    const innerCircle = friend && conn.youInner && conn.theyInner;
-    const allowed =
-      friend &&
-      innerCircle &&
-      conn.aiChatOptIn &&
-      aiChatSettings.youAllowFriendAiChat;
-    const blockReason = !friend
-      ? 'Not friends yet'
-      : !(conn.youInner && conn.theyInner)
-      ? 'Both must add to Inner Circle'
-      : !aiChatSettings.youAllowFriendAiChat || !conn.aiChatOptIn
-      ? 'One side disabled Friend AI chat'
-      : '';
+    const { allowed, blockReason, friend, innerCircle } = evaluateFriendAiGate(conn);
     const card = document.createElement('div');
     card.className = 'relationship-card';
     card.innerHTML = `
@@ -469,10 +723,34 @@ function renderAiChatRules() {
         <span class="state-pill ${aiChatSettings.youAllowFriendAiChat ? 'on' : ''}">You allow AI chat</span>
       </div>
       <p class="status">${allowed ? '🟢 Allowed for Friend AI chat' : `🔴 ${blockReason}`}</p>
+      <button class="ghost" data-action="friend-chat" data-id="${conn.id}" ${allowed ? '' : 'data-blocked="true"'}>
+        ${allowed ? 'Start Friend AI chat' : 'Request Inner Circle'}</button>
     `;
     aiChatRules.appendChild(card);
   });
 }
+
+aiChatRules.addEventListener('click', (event) => {
+  const btn = event.target.closest('button[data-action="friend-chat"]');
+  if (!btn) return;
+  const conn = socialConnections.find((c) => c.id === btn.dataset.id);
+  if (!conn) return;
+  const { allowed, blockReason } = evaluateFriendAiGate(conn);
+  if (!allowed) {
+    showToast(blockReason || 'Friend AI chat blocked', 'error');
+    logAnalytics('friend_ai_chat_block', { id: conn.id, reason: blockReason });
+    return;
+  }
+  pushMessage(
+    'ai',
+    `Starting Friend AI chat with ${conn.name} — inner circle + opt-in verified.`,
+    true
+  );
+  simulateApi(`/api/friend-ai/${conn.id}/chat-session`).then(() => {
+    pushMessage('ai', `${conn.name} is ready to chat privately.`);
+    logAnalytics('friend_ai_chat_start', { id: conn.id });
+  });
+});
 
 function renderDiscovery() {
   discoveryList.innerHTML = '';
@@ -513,6 +791,7 @@ function toggleFollow(id) {
   renderFollowAndInnerCircle();
   renderMemory();
   renderAiChatRules();
+  logAnalytics('social_follow_toggle', { id, following: conn.youFollow, friend: isFriendNow });
 }
 
 function toggleInner(id) {
@@ -521,6 +800,7 @@ function toggleInner(id) {
   conn.youInner = !conn.youInner;
   renderFollowAndInnerCircle();
   renderAiChatRules();
+  logAnalytics('social_inner_circle', { id, inner: conn.youInner });
 }
 
 followGrid.addEventListener('click', (e) => {
@@ -537,109 +817,463 @@ renderDiscovery();
 
 // Explore
 const exploreList = document.getElementById('explore-list');
+const exploreForm = document.getElementById('explore-form');
+const exploreCategory = document.getElementById('explore-category');
+const exploreCursor = document.getElementById('explore-cursor');
+const exploreStatus = document.getElementById('explore-status');
+const exploreActionStatus = document.getElementById('explore-action-status');
+
 const exploreItems = [
-  { name: 'EveAI', category: 'trending', action: 'Chat' },
-  { name: 'MoAI', category: 'most evolved', action: 'Follow' },
-  { name: 'LunaAI', category: 'viral dialog', action: 'View' },
-  { name: 'Brand Pulse', category: 'brand spot', action: 'Generate' },
+  { id: 'marai-18', name: 'EveAI', category: 'trending', persona: 'neon poet' },
+  { id: 'marai-42', name: 'MoAI', category: 'most-evolved', persona: 'adaptive mentor' },
+  { id: 'marai-77', name: 'LunaAI', category: 'viral-dialog', persona: 'debate partner' },
+  { id: 'brand-11', name: 'Brand Pulse', category: 'brand', persona: 'scene engine' },
 ];
 
-function renderExplore() {
+function renderExplore(filter = 'all') {
   exploreList.innerHTML = '';
-  exploreItems.forEach((item) => {
-    const card = document.createElement('div');
-    card.className = 'explore-card';
-    card.innerHTML = `
-      <div class="card-header">
-        <div>
-          <p class="eyebrow">${item.category}</p>
-          <h3>${item.name}</h3>
+  exploreItems
+    .filter((item) => filter === 'all' || item.category === filter)
+    .forEach((item) => {
+      const card = document.createElement('div');
+      card.className = 'explore-card';
+      card.innerHTML = `
+        <div class="card-header">
+          <div>
+            <p class="eyebrow">${item.category}</p>
+            <h3>${item.name}</h3>
+          </div>
+          <span class="badge">GET /api/explore</span>
         </div>
-        <button class="ghost">${item.action}</button>
-      </div>
-      <p class="lede">Discovery action routed to server</p>
-    `;
-    exploreList.appendChild(card);
-  });
+        <p class="lede">${item.persona} · follow or chat to open /api/marai/${item.id}/chat-session.</p>
+        <div class="actions">
+          <button class="ghost" data-action="follow" data-id="${item.id}">Follow</button>
+          <button class="ghost" data-action="chat" data-id="${item.id}">Start chat</button>
+        </div>
+      `;
+      exploreList.appendChild(card);
+    });
 }
+
+exploreForm.addEventListener('submit', (e) => {
+  e.preventDefault();
+  let category = 'all';
+  let cursor = 'latest';
+  try {
+    category = sanitizeInput(exploreCategory.value || 'all', { maxLength: 24 });
+    cursor = sanitizeInput(exploreCursor.value || 'latest', { maxLength: 64 });
+  } catch (error) {
+    exploreStatus.textContent = error.message;
+    return;
+  }
+  exploreStatus.textContent = `GET /api/explore?category=${category}&cursor=${cursor}`;
+  simulateApi(`/api/explore?category=${category}&cursor=${cursor}`).then(() => {
+    exploreStatus.textContent = `Loaded ${category} feed from cursor ${cursor}`;
+    renderExplore(category);
+  });
+});
+
+exploreList.addEventListener('click', (e) => {
+  const btn = e.target.closest('button[data-action]');
+  if (!btn) return;
+  const id = btn.dataset.id;
+  const endpoint = btn.dataset.action === 'follow' ? `/api/marai/${id}/follow` : `/api/marai/${id}/chat-session`;
+  exploreActionStatus.textContent = `Calling ${endpoint}`;
+  simulateApi(endpoint).then(() => {
+    exploreActionStatus.textContent = btn.dataset.action === 'follow' ? `Followed ${id}` : `Chat started for ${id}`;
+  });
+});
 
 renderExplore();
 
 // Dreams
 const dreamList = document.getElementById('dream-list');
+const dreamFilter = document.getElementById('dream-filter');
+const dreamMood = document.getElementById('dream-mood');
+const dreamStatus = document.getElementById('dream-status');
+const dreamDetail = document.getElementById('dream-detail');
+const dreamDetailStatus = document.getElementById('dream-detail-status');
+
 const dreams = [
-  { id: 'd1', mood: 'calm', caption: 'Moonlit rails humming softly.' },
-  { id: 'd2', mood: 'bright', caption: 'Petal storms over neon rivers.' },
-  { id: 'd3', mood: 'moody', caption: 'Glass towers breathing fog.' },
+  {
+    id: 'd1',
+    mood: 'calm',
+    caption: 'Moonlit rails humming softly.',
+    detail: 'Widescreen shot; lavender fog; gentle soundtrack.',
+  },
+  {
+    id: 'd2',
+    mood: 'bright',
+    caption: 'Petal storms over neon rivers.',
+    detail: 'Vivid gradients; upbeat tempo; hopeful pacing.',
+  },
+  {
+    id: 'd3',
+    mood: 'moody',
+    caption: 'Glass towers breathing fog.',
+    detail: 'Low saturation; noir lighting; whispering echoes.',
+  },
 ];
 
-function renderDreams() {
+function renderDreams(filter = 'all') {
   dreamList.innerHTML = '';
-  dreams.forEach((dream) => {
-    const card = document.createElement('div');
-    card.className = 'dream-card';
-    card.innerHTML = `
-      <div class="card-header">
-        <div>
-          <p class="eyebrow">${dream.mood}</p>
-          <h3>${dream.caption}</h3>
+  dreams
+    .filter((dream) => filter === 'all' || dream.mood === filter)
+    .forEach((dream) => {
+      const card = document.createElement('div');
+      card.className = 'dream-card';
+      card.innerHTML = `
+        <div class="card-header">
+          <div>
+            <p class="eyebrow">${dream.mood}</p>
+            <h3>${dream.caption}</h3>
+          </div>
+          <div class="actions">
+            <button class="ghost view" data-id="${dream.id}">View</button>
+            <button class="ghost regen" data-id="${dream.id}">Regenerate</button>
+            <button class="ghost share" data-id="${dream.id}">Share</button>
+          </div>
         </div>
-        <div class="actions">
-          <button class="ghost regen" data-id="${dream.id}">Regenerate</button>
-          <button class="ghost share" data-id="${dream.id}">Share</button>
-        </div>
-      </div>
-      <p class="lede">Diary entry routed to /api/dreams/${dream.id}</p>
-    `;
-    dreamList.appendChild(card);
-  });
+        <p class="lede">GET /api/dreams/${dream.id} for detail; actions patch diary entries.</p>
+      `;
+      dreamList.appendChild(card);
+    });
 }
+
+function showDreamDetail(dream) {
+  dreamDetail.innerHTML = `
+    <p class="eyebrow">${dream.mood}</p>
+    <h4>${dream.caption}</h4>
+    <p class="lede">${dream.detail}</p>
+  `;
+}
+
+dreamFilter.addEventListener('submit', (e) => {
+  e.preventDefault();
+  const mood = dreamMood.value;
+  dreamStatus.textContent = `GET /api/dreams?mood=${mood}`;
+  simulateApi(`/api/dreams?mood=${mood}`).then(() => {
+    dreamStatus.textContent = `Loaded ${mood} dreams`;
+    renderDreams(mood);
+  });
+});
 
 dreamList.addEventListener('click', (e) => {
   const btn = e.target.closest('button');
   if (!btn) return;
   const id = btn.dataset.id;
+  const dream = dreams.find((d) => d.id === id);
+  if (!dream) return;
+  if (btn.classList.contains('view')) {
+    dreamDetailStatus.textContent = `Fetching /api/dreams/${id}`;
+    simulateApi(`/api/dreams/${id}`).then(() => {
+      dreamDetailStatus.textContent = `Loaded /api/dreams/${id}`;
+      showDreamDetail(dream);
+    });
+    return;
+  }
   btn.textContent = 'Working…';
   const endpoint = btn.classList.contains('regen')
     ? `/api/dreams/${id}/regenerate`
     : `/api/dreams/${id}/share`;
   simulateApi(endpoint).then(() => {
     btn.textContent = 'Done';
+    dreamDetailStatus.textContent = `${btn.classList.contains('regen') ? 'Regenerated' : 'Shared'} ${id}`;
   });
 });
 
 renderDreams();
 
-// Admin
-const adminMetrics = document.getElementById('admin-metrics');
-const birthForm = document.getElementById('birth-form');
-const adminStatus = document.getElementById('admin-status');
+// Brand Hub
+const brandLoadBtn = document.getElementById('brand-load');
+const brandLoadStatus = document.getElementById('brand-load-status');
+const brandPrompt = document.getElementById('brand-prompt');
+const brandGenerateBtn = document.getElementById('brand-generate');
+const brandGenerateStatus = document.getElementById('brand-generate-status');
+const brandPreferencesForm = document.getElementById('brand-preferences');
+const brandPalette = document.getElementById('brand-palette');
+const brandTone = document.getElementById('brand-tone');
+const brandPrefStatus = document.getElementById('brand-pref-status');
 
-aSyncMetrics();
+brandLoadBtn.addEventListener('click', () => {
+  brandLoadStatus.textContent = 'GET /api/brand-ai';
+  simulateApi('/api/brand-ai').then(() => {
+    brandLoadStatus.textContent = 'Brand defaults hydrated';
+  });
+});
 
-function aSyncMetrics() {
-  const metrics = [
-    ['Active MarAI', '1.2k'],
-    ['Dreams today', '3.4k'],
-    ['Avg bond strength', '78%'],
-  ];
-  adminMetrics.innerHTML = '';
-  metrics.forEach(([label, value]) => {
+brandGenerateBtn.addEventListener('click', () => {
+  brandGenerateStatus.textContent = 'Submitting scene job…';
+  simulateApi('/api/brand-ai/scene', { prompt: brandPrompt.value }).then(() => {
+    brandGenerateStatus.textContent = 'Scene generated with brand safety';
+  });
+});
+
+brandPreferencesForm.addEventListener('submit', (e) => {
+  e.preventDefault();
+  brandPrefStatus.textContent = 'Saving preferences…';
+  simulateApi('/api/brand-ai/preferences', { palette: brandPalette.value, tone: brandTone.value }).then(() => {
+    brandPrefStatus.textContent = 'Preferences stored';
+  });
+});
+
+// Story Studio
+let currentJobId = '';
+const videoJobForm = document.getElementById('video-job-form');
+const videoPrompt = document.getElementById('video-prompt');
+const videoResolution = document.getElementById('video-resolution');
+const videoJobStatus = document.getElementById('video-job-status');
+const videoJobIdEl = document.getElementById('video-job-id');
+const videoPollBtn = document.getElementById('video-poll');
+const videoExportBtn = document.getElementById('video-export');
+const videoPollStatus = document.getElementById('video-poll-status');
+const presetForm = document.getElementById('preset-form');
+const presetName = document.getElementById('preset-name');
+const presetStyle = document.getElementById('preset-style');
+const presetStatus = document.getElementById('preset-status');
+const presetList = document.getElementById('preset-list');
+
+let presets = [
+  ['Soft bloom', 'cinematic'],
+  ['Kinetic dance', 'lofi'],
+];
+
+function renderPresets() {
+  presetList.innerHTML = '';
+  presets.forEach(([name, style]) => {
     const row = document.createElement('li');
     row.className = 'stat-item';
-    row.innerHTML = `<span>${label}</span><strong>${value}</strong>`;
-    adminMetrics.appendChild(row);
+    row.innerHTML = `<span>${name}</span><strong>${style}</strong>`;
+    presetList.appendChild(row);
   });
 }
 
-birthForm.addEventListener('submit', (e) => {
+videoJobForm.addEventListener('submit', (e) => {
   e.preventDefault();
-  adminStatus.textContent = 'Saving with audit…';
-  simulateApi('/api/admin/birth-rate', { target: Number(document.getElementById('birth-rate').value) }).then(() => {
-    adminStatus.textContent = 'Stored with audit trail';
+  let prompt = '';
+  let resolution = '';
+  try {
+    prompt = sanitizeInput(videoPrompt.value, { maxLength: 240 });
+    resolution = sanitizeInput(videoResolution.value, { maxLength: 20 });
+  } catch (error) {
+    videoJobStatus.textContent = error.message;
+    return;
+  }
+  videoJobStatus.textContent = 'POST /api/video-jobs';
+  simulateApi('/api/video-jobs', { prompt, resolution }).then(() => {
+    currentJobId = `job_${Date.now()}`;
+    videoJobStatus.textContent = `Submitted as ${currentJobId}`;
+    videoJobIdEl.textContent = `Job ID ${currentJobId}`;
   });
 });
 
-document.getElementById('audit-log').addEventListener('click', () => {
-  adminStatus.textContent = 'Audit log downloaded';
+videoPollBtn.addEventListener('click', () => {
+  if (!currentJobId) {
+    videoPollStatus.textContent = 'Submit a job first';
+    return;
+  }
+  videoPollStatus.textContent = `GET /api/video-jobs/${currentJobId}`;
+  simulateApi(`/api/video-jobs/${currentJobId}`).then(() => {
+    videoPollStatus.textContent = 'Progress: ready to export';
+  });
 });
+
+videoExportBtn.addEventListener('click', () => {
+  if (!currentJobId) {
+    videoPollStatus.textContent = 'No job to export';
+    return;
+  }
+  videoPollStatus.textContent = `POST /api/video-jobs/${currentJobId}/export`;
+  simulateApi(`/api/video-jobs/${currentJobId}/export`).then(() => {
+    videoPollStatus.textContent = 'Export ready';
+  });
+});
+
+presetForm.addEventListener('submit', (e) => {
+  e.preventDefault();
+  let name = '';
+  let style = '';
+  try {
+    name = sanitizeInput(presetName.value, { maxLength: 60 });
+    style = sanitizeInput(presetStyle.value, { maxLength: 60 });
+  } catch (error) {
+    presetStatus.textContent = error.message;
+    return;
+  }
+  presetStatus.textContent = 'POST /api/video-presets';
+  simulateApi('/api/video-presets', { name, style }).then(() => {
+    presetStatus.textContent = 'Preset saved';
+    presets = [...presets, [name, style]];
+    renderPresets();
+  });
+});
+
+renderPresets();
+
+// Admin
+const adminMetrics = document.getElementById('admin-metrics');
+const adminOverviewStatus = document.getElementById('admin-overview-status');
+const adminStatus = document.getElementById('admin-status');
+const clusterStatus = document.getElementById('cluster-status');
+const personaClusters = document.getElementById('persona-clusters');
+const adminSearchForm = document.getElementById('admin-search-form');
+const adminSearchStatus = document.getElementById('admin-search-status');
+const adminSearchResults = document.getElementById('admin-search-results');
+const birthForm = document.getElementById('birth-form');
+const auctionForm = document.getElementById('auction-form');
+const tokenForm = document.getElementById('token-form');
+const auctionStatus = document.getElementById('auction-status');
+const tokenStatus = document.getElementById('token-status');
+let adminHydrated = false;
+
+function hydrateAdmin() {
+  if (adminHydrated) return;
+  if (!requireAdminGuard(adminStatus)) return;
+  fetchAdminOverview();
+  fetchPersonaClusters();
+  adminHydrated = true;
+}
+
+function fetchAdminOverview() {
+  if (!requireAdminGuard(adminStatus)) return;
+  adminOverviewStatus.textContent = 'GET /api/admin/overview…';
+  const mockResponse = {
+    metrics: [
+      ['Active MarAI', '1.2k'],
+      ['Dreams today', '3.4k'],
+      ['Avg bond strength', '78%'],
+    ],
+    alerts: ['No anomalies detected'],
+  };
+  simulateApi('/api/admin/overview', {}, mockResponse).then((data) => {
+    adminMetrics.innerHTML = '';
+    data.metrics.forEach(([label, value]) => {
+      const row = document.createElement('li');
+      row.className = 'stat-item';
+      row.innerHTML = `<span>${label}</span><strong>${value}</strong>`;
+      adminMetrics.appendChild(row);
+    });
+    data.alerts.forEach((alert) => {
+      const row = document.createElement('li');
+      row.className = 'stat-item';
+      row.innerHTML = `<span>Alert</span><strong>${alert}</strong>`;
+      adminMetrics.appendChild(row);
+    });
+    adminOverviewStatus.textContent = 'Overview synced';
+    logAnalytics('admin_fetch', { endpoint: '/api/admin/overview' });
+  });
+}
+
+function fetchPersonaClusters() {
+  if (!requireAdminGuard(adminStatus)) return;
+  clusterStatus.textContent = 'GET /api/admin/persona-clusters…';
+  const mockClusters = {
+    clusters: [
+      { name: 'Dream Weavers', size: 420, cohesion: '0.82' },
+      { name: 'Brand Guardians', size: 88, cohesion: '0.71' },
+      { name: 'Explorers', size: 190, cohesion: '0.63' },
+    ],
+  };
+  simulateApi('/api/admin/persona-clusters', {}, mockClusters).then((data) => {
+    personaClusters.innerHTML = '';
+    data.clusters.forEach((cluster) => {
+      const row = document.createElement('li');
+      row.className = 'stat-item';
+      row.innerHTML = `<span>${cluster.name}</span><strong>${cluster.size} · cohesion ${cluster.cohesion}</strong>`;
+      personaClusters.appendChild(row);
+    });
+    clusterStatus.textContent = 'Clusters refreshed';
+    logAnalytics('admin_fetch', { endpoint: '/api/admin/persona-clusters' });
+  });
+}
+
+adminSearchForm.addEventListener('submit', (e) => {
+  e.preventDefault();
+  if (!requireAdminGuard(adminStatus)) return;
+  let query = '';
+  try {
+    query = sanitizeInput(document.getElementById('admin-search').value, { maxLength: 120 });
+  } catch (error) {
+    adminSearchStatus.textContent = error.message;
+    return;
+  }
+  adminSearchStatus.textContent = 'GET /api/admin/search…';
+  const mockResults = {
+    results: [
+      { name: 'RenAI', type: 'persona', cluster: 'Dream Weavers' },
+      { name: 'KoiAI', type: 'persona', cluster: 'Explorers' },
+      { name: 'Brand Nova', type: 'brand', cluster: 'Brand Guardians' },
+    ].filter((item) => item.name.toLowerCase().includes(query.toLowerCase())),
+  };
+  simulateApi('/api/admin/search', { query }, mockResults).then((data) => {
+    adminSearchResults.innerHTML = '';
+    if (!data.results.length) {
+      adminSearchResults.innerHTML = '<li class="stat-item">No results</li>';
+    } else {
+      data.results.forEach((item) => {
+        const row = document.createElement('li');
+        row.className = 'stat-item';
+        row.innerHTML = `<span>${item.type}</span><strong>${item.name} · ${item.cluster}</strong>`;
+        adminSearchResults.appendChild(row);
+      });
+    }
+    adminSearchStatus.textContent = 'Search complete';
+    logAnalytics('admin_fetch', { endpoint: '/api/admin/search', query });
+  });
+});
+
+birthForm.addEventListener('submit', (e) => {
+  e.preventDefault();
+  const rawValue = document.getElementById('birth-rate').value;
+  const target = Number(rawValue);
+  if (Number.isNaN(target)) {
+    adminStatus.textContent = 'Enter a numeric birth rate';
+    return;
+  }
+  confirmAndSend(
+    '/api/admin/birth-rate',
+    { target },
+    adminStatus,
+    'Apply new birth rate with audit logging?'
+  );
+});
+
+auctionForm.addEventListener('submit', (e) => {
+  e.preventDefault();
+  confirmAndSend(
+    '/api/admin/auction-actions',
+    { action: document.getElementById('auction-action').value },
+    auctionStatus,
+    'Confirm sending auction directive?'
+  );
+});
+
+tokenForm.addEventListener('submit', (e) => {
+  e.preventDefault();
+  confirmAndSend(
+    '/api/admin/token-actions',
+    { action: document.getElementById('token-action').value },
+    tokenStatus,
+    'Confirm token control action?'
+  );
+});
+
+document.getElementById('audit-log').addEventListener('click', () => {
+  if (!requireAdminGuard(adminStatus)) return;
+  adminStatus.textContent = 'Audit log downloaded';
+  logAnalytics('admin_fetch', { endpoint: '/api/admin/audit-log' });
+});
+
+function confirmAndSend(endpoint, payload, statusEl, confirmation) {
+  if (!requireAdminGuard(statusEl)) return;
+  const confirmed = window.confirm(confirmation);
+  if (!confirmed) {
+    statusEl.textContent = 'Cancelled';
+    return;
+  }
+  statusEl.textContent = `POST ${endpoint}…`;
+  simulateApi(endpoint, payload).then(() => {
+    statusEl.textContent = 'Stored with audit trail';
+    logAnalytics('admin_write', { endpoint });
+  });
+}

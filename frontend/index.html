@@ -13,6 +13,15 @@
     />
   </head>
   <body>
+    <div id="offline-banner" class="status-banner" role="status" aria-live="polite">
+      <span class="dot" aria-hidden="true"></span>
+      <div>
+        <strong>Offline mode</strong>
+        <p class="lede">Actions will be queued and retried when you reconnect.</p>
+      </div>
+      <button class="ghost" id="retry-queued" aria-label="Retry queued jobs">Retry queued jobs</button>
+    </div>
+    <div id="toast-layer" class="toast-layer" aria-live="polite"></div>
     <div class="app-shell">
       <aside class="sidebar">
         <div class="brand">
@@ -22,7 +31,7 @@
             <p class="title">Story Studio</p>
           </div>
         </div>
-        <nav>
+        <nav aria-label="Primary navigation">
           <button class="nav-btn" data-target="onboarding">Onboarding</button>
           <button class="nav-btn" data-target="feed">Home Feed</button>
           <button class="nav-btn" data-target="profile">RenAI Card</button>
@@ -30,12 +39,17 @@
           <button class="nav-btn" data-target="graph">Social Graph</button>
           <button class="nav-btn" data-target="explore">Explore</button>
           <button class="nav-btn" data-target="dreams">Dream Archive</button>
-          <button class="nav-btn" data-target="admin">Admin</button>
+          <button class="nav-btn" data-target="brand-hub" id="nav-brand-hub">Brand Hub</button>
+          <button class="nav-btn" data-target="story-studio">Story Studio</button>
+          <button class="nav-btn" data-target="admin" id="nav-admin">Admin</button>
         </nav>
         <div class="helper-card">
           <p class="eyebrow">Feature Flags</p>
-          <div class="pill">Brand Hub</div>
-          <div class="pill pill-secondary">Admin</div>
+          <div class="chip-row">
+            <span class="pill" id="flag-brand-hub">Brand Hub: on</span>
+            <span class="pill pill-secondary" id="flag-admin-panel">Admin: on</span>
+          </div>
+          <p class="status" id="flag-status">Feature-gated navigation</p>
         </div>
       </aside>
 
@@ -283,10 +297,29 @@
             <div>
               <p class="eyebrow">Explore Page</p>
               <h1>Discovery filters with chat CTAs</h1>
+              <p class="lede">Filters map to <strong>GET /api/explore?category=&hellip;&amp;cursor=&hellip;</strong>.</p>
             </div>
             <div class="pill">Server sorted</div>
           </header>
+          <form id="explore-form" class="stack compact">
+            <div class="grid three">
+              <label>Category
+                <select id="explore-category">
+                  <option value="trending">trending</option>
+                  <option value="most-evolved">most-evolved</option>
+                  <option value="viral-dialog">viral-dialog</option>
+                  <option value="brand">brand</option>
+                </select>
+              </label>
+              <label>Cursor<input id="explore-cursor" placeholder="ts_1712..." /></label>
+              <div class="actions align-end">
+                <button type="submit" class="primary">Fetch</button>
+                <p class="status" id="explore-status">Idle</p>
+              </div>
+            </div>
+          </form>
           <div id="explore-list" class="grid three"></div>
+          <p class="status" id="explore-action-status">Card actions hit follow/chat endpoints.</p>
         </section>
 
         <section id="dreams" class="panel">
@@ -294,10 +327,190 @@
             <div>
               <p class="eyebrow">Dream Archive</p>
               <h1>Mood-filtered dream diary</h1>
+              <p class="lede">List view calls <strong>GET /api/dreams?mood=&hellip;</strong>; detail uses <strong>GET /api/dreams/:id</strong>.</p>
             </div>
             <div class="pill pill-secondary">Regenerate + share</div>
           </header>
-          <div id="dream-list" class="grid three"></div>
+          <form id="dream-filter" class="stack compact">
+            <div class="grid two">
+              <label>Mood
+                <select id="dream-mood">
+                  <option value="all">All</option>
+                  <option value="calm">Calm</option>
+                  <option value="bright">Bright</option>
+                  <option value="moody">Moody</option>
+                </select>
+              </label>
+              <div class="actions align-end">
+                <button type="submit" class="ghost">Refresh</button>
+                <p class="status" id="dream-status">Idle</p>
+              </div>
+            </div>
+          </form>
+          <div class="grid two">
+            <div id="dream-list" class="grid two"></div>
+            <div class="card">
+              <div class="card-header">
+                <div>
+                  <p class="eyebrow">Dream Detail</p>
+                  <h3>GET /api/dreams/:id</h3>
+                </div>
+                <span class="badge">Actions</span>
+              </div>
+              <div class="stack" id="dream-detail">
+                <p class="lede">Select a dream to fetch details.</p>
+                <p class="status" id="dream-detail-status">Idle</p>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section id="brand-hub" class="panel">
+          <header class="panel-header">
+            <div>
+              <p class="eyebrow">BrandHubPage</p>
+              <h1>Brand-safe MarAI controls</h1>
+              <p class="lede">Feature-flagged hub powered by <strong>GET /api/brand-ai</strong>.</p>
+            </div>
+            <div class="pill">Feature Flag: enabled</div>
+          </header>
+          <div class="grid two">
+            <div class="card">
+              <div class="card-header">
+                <div>
+                  <p class="eyebrow">Brand brief</p>
+                  <h3>Load preferences</h3>
+                </div>
+                <span class="badge">GET /api/brand-ai</span>
+              </div>
+              <div class="stack">
+                <p class="lede">Retrieve the latest brand safety + tone defaults.</p>
+                <button class="primary" id="brand-load">Fetch brand AI</button>
+                <p class="status" id="brand-load-status">Idle</p>
+              </div>
+            </div>
+            <div class="card">
+              <div class="card-header">
+                <div>
+                  <p class="eyebrow">Scene generator</p>
+                  <h3>Generate brand-safe scene</h3>
+                </div>
+                <span class="badge">POST /api/brand-ai/scene</span>
+              </div>
+              <div class="stack">
+                <label>Prompt<textarea id="brand-prompt">MarAI hosts a serene neon lounge.</textarea></label>
+                <div class="actions">
+                  <button class="primary" id="brand-generate">Generate</button>
+                  <p class="status" id="brand-generate-status">Idle</p>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="card">
+            <div class="card-header">
+              <div>
+                <p class="eyebrow">Preferences</p>
+                <h3>Set defaults</h3>
+              </div>
+              <span class="badge">POST /api/brand-ai/preferences</span>
+            </div>
+            <form id="brand-preferences" class="grid three">
+              <label>Palette
+                <select id="brand-palette">
+                  <option value="neon">Neon</option>
+                  <option value="pastel">Pastel</option>
+                  <option value="mono">Monochrome</option>
+                </select>
+              </label>
+              <label>Tone
+                <select id="brand-tone">
+                  <option value="optimistic">Optimistic</option>
+                  <option value="calm">Calm</option>
+                  <option value="playful">Playful</option>
+                </select>
+              </label>
+              <div class="actions align-end">
+                <button class="primary" type="submit">Save</button>
+                <p class="status" id="brand-pref-status">Idle</p>
+              </div>
+            </form>
+          </div>
+        </section>
+
+        <section id="story-studio" class="panel">
+          <header class="panel-header">
+            <div>
+              <p class="eyebrow">StoryStudioPage</p>
+              <h1>Video job + preset orchestration</h1>
+              <p class="lede">Jobs flow through <strong>POST /api/video-jobs</strong>, polling, export, and preset management.</p>
+            </div>
+            <div class="pill">Story Studio</div>
+          </header>
+          <div class="grid two">
+            <div class="card">
+              <div class="card-header">
+                <div>
+                  <p class="eyebrow">Submit</p>
+                  <h3>New video job</h3>
+                </div>
+                <span class="badge">POST /api/video-jobs</span>
+              </div>
+              <form id="video-job-form" class="stack">
+                <label>Prompt<textarea id="video-prompt">A hopeful walk through rainy Tokyo.</textarea></label>
+                <label>Resolution<select id="video-resolution"><option>1080p</option><option>4K</option></select></label>
+                <div class="actions">
+                  <button class="primary" type="submit">Submit job</button>
+                  <p class="status" id="video-job-status">Idle</p>
+                </div>
+              </form>
+            </div>
+            <div class="card">
+              <div class="card-header">
+                <div>
+                  <p class="eyebrow">Tracking</p>
+                  <h3>Poll + export</h3>
+                </div>
+                <span class="badge">/api/video-jobs/:id</span>
+              </div>
+              <div class="stack" id="video-tracker">
+                <p class="lede" id="video-job-id">No job submitted yet.</p>
+                <div class="actions">
+                  <button class="ghost" id="video-poll">Poll status</button>
+                  <button class="ghost" id="video-export">Export</button>
+                </div>
+                <p class="status" id="video-poll-status">Waiting</p>
+              </div>
+            </div>
+          </div>
+          <div class="card motion-shimmer" aria-live="polite">
+            <div class="card-header">
+              <div>
+                <p class="eyebrow">Reliability</p>
+                <h3>Retry queue</h3>
+              </div>
+              <span class="badge">Offline friendly</span>
+            </div>
+            <p class="lede" id="retry-queue-status">No queued jobs</p>
+            <ul id="retry-queue-list" class="stat-list"></ul>
+          </div>
+          <div class="card">
+            <div class="card-header">
+              <div>
+                <p class="eyebrow">Presets</p>
+                <h3>Manage video presets</h3>
+              </div>
+              <span class="badge">/api/video-presets</span>
+            </div>
+            <form id="preset-form" class="grid three">
+              <label>Name<input id="preset-name" value="Moody night" /></label>
+              <label>Style<select id="preset-style"><option>cinematic</option><option>documentary</option><option>lofi</option></select></label>
+              <div class="actions align-end">
+                <button class="ghost" type="submit">Save preset</button>
+                <p class="status" id="preset-status">Idle</p>
+              </div>
+            </form>
+            <ul id="preset-list" class="stat-list"></ul>
+          </div>
         </section>
 
         <section id="admin" class="panel">
@@ -308,7 +521,7 @@
             </div>
             <div class="pill">Audit logging</div>
           </header>
-          <div class="grid two">
+          <div class="grid three">
             <div class="card">
               <div class="card-header">
                 <div>
@@ -318,22 +531,70 @@
                 <span class="badge">GET /api/admin/overview</span>
               </div>
               <ul id="admin-metrics" class="stat-list"></ul>
+              <p class="status" id="admin-overview-status">Loading…</p>
             </div>
             <div class="card">
               <div class="card-header">
                 <div>
-                  <p class="eyebrow">Birth Rate</p>
-                  <h3>Control</h3>
+                  <p class="eyebrow">Persona clusters</p>
+                  <h3>Signal distributions</h3>
                 </div>
-                <span class="badge">POST /api/admin/birth-rate</span>
+                <span class="badge">GET /api/admin/persona-clusters</span>
               </div>
+              <ul id="persona-clusters" class="stat-list"></ul>
+              <p class="status" id="cluster-status">Loading…</p>
+            </div>
+            <div class="card">
+              <div class="card-header">
+                <div>
+                  <p class="eyebrow">Search</p>
+                  <h3>Investigate profiles</h3>
+                </div>
+                <span class="badge">GET /api/admin/search</span>
+              </div>
+              <form id="admin-search-form" class="stack">
+                <label>Query<input id="admin-search" placeholder="Username, persona, or cluster" /></label>
+                <div class="actions">
+                  <button class="ghost" type="submit">Search</button>
+                  <p class="status" id="admin-search-status">Idle</p>
+                </div>
+              </form>
+              <ul id="admin-search-results" class="stat-list"></ul>
+            </div>
+          </div>
+          <div class="card">
+            <div class="card-header">
+              <div>
+                <p class="eyebrow">Controls</p>
+                <h3>Write actions with confirmations</h3>
+              </div>
+              <span class="badge">POST /api/admin/*</span>
+            </div>
+            <div class="grid three" id="admin-actions">
               <form id="birth-form" class="stack">
+                <p class="eyebrow">Birth Rate</p>
                 <label>Target per hour<input id="birth-rate" type="number" value="18" /></label>
                 <div class="actions">
                   <button class="primary" type="submit">Apply</button>
                   <button class="ghost" type="button" id="audit-log">View audit</button>
                 </div>
                 <p class="status" id="admin-status">Idle</p>
+              </form>
+              <form id="auction-form" class="stack">
+                <p class="eyebrow">Auctions</p>
+                <label>Action<textarea id="auction-action">Pause secondary markets</textarea></label>
+                <div class="actions">
+                  <button class="primary" type="submit">Send</button>
+                  <p class="status" id="auction-status">Idle</p>
+                </div>
+              </form>
+              <form id="token-form" class="stack">
+                <p class="eyebrow">Token actions</p>
+                <label>Instruction<textarea id="token-action">Throttle token minting</textarea></label>
+                <div class="actions">
+                  <button class="primary" type="submit">Send</button>
+                  <p class="status" id="token-status">Idle</p>
+                </div>
               </form>
             </div>
           </div>
