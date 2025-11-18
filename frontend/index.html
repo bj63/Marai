@@ -30,14 +30,17 @@
           <button class="nav-btn" data-target="graph">Social Graph</button>
           <button class="nav-btn" data-target="explore">Explore</button>
           <button class="nav-btn" data-target="dreams">Dream Archive</button>
-          <button class="nav-btn" data-target="brand-hub">Brand Hub</button>
+          <button class="nav-btn" data-target="brand-hub" id="nav-brand-hub">Brand Hub</button>
           <button class="nav-btn" data-target="story-studio">Story Studio</button>
-          <button class="nav-btn" data-target="admin">Admin</button>
+          <button class="nav-btn" data-target="admin" id="nav-admin">Admin</button>
         </nav>
         <div class="helper-card">
           <p class="eyebrow">Feature Flags</p>
-          <div class="pill">Brand Hub</div>
-          <div class="pill pill-secondary">Admin</div>
+          <div class="chip-row">
+            <span class="pill" id="flag-brand-hub">Brand Hub: on</span>
+            <span class="pill pill-secondary" id="flag-admin-panel">Admin: on</span>
+          </div>
+          <p class="status" id="flag-status">Feature-gated navigation</p>
         </div>
       </aside>
 
@@ -498,7 +501,7 @@
             </div>
             <div class="pill">Audit logging</div>
           </header>
-          <div class="grid two">
+          <div class="grid three">
             <div class="card">
               <div class="card-header">
                 <div>
@@ -508,22 +511,70 @@
                 <span class="badge">GET /api/admin/overview</span>
               </div>
               <ul id="admin-metrics" class="stat-list"></ul>
+              <p class="status" id="admin-overview-status">Loading…</p>
             </div>
             <div class="card">
               <div class="card-header">
                 <div>
-                  <p class="eyebrow">Birth Rate</p>
-                  <h3>Control</h3>
+                  <p class="eyebrow">Persona clusters</p>
+                  <h3>Signal distributions</h3>
                 </div>
-                <span class="badge">POST /api/admin/birth-rate</span>
+                <span class="badge">GET /api/admin/persona-clusters</span>
               </div>
+              <ul id="persona-clusters" class="stat-list"></ul>
+              <p class="status" id="cluster-status">Loading…</p>
+            </div>
+            <div class="card">
+              <div class="card-header">
+                <div>
+                  <p class="eyebrow">Search</p>
+                  <h3>Investigate profiles</h3>
+                </div>
+                <span class="badge">GET /api/admin/search</span>
+              </div>
+              <form id="admin-search-form" class="stack">
+                <label>Query<input id="admin-search" placeholder="Username, persona, or cluster" /></label>
+                <div class="actions">
+                  <button class="ghost" type="submit">Search</button>
+                  <p class="status" id="admin-search-status">Idle</p>
+                </div>
+              </form>
+              <ul id="admin-search-results" class="stat-list"></ul>
+            </div>
+          </div>
+          <div class="card">
+            <div class="card-header">
+              <div>
+                <p class="eyebrow">Controls</p>
+                <h3>Write actions with confirmations</h3>
+              </div>
+              <span class="badge">POST /api/admin/*</span>
+            </div>
+            <div class="grid three" id="admin-actions">
               <form id="birth-form" class="stack">
+                <p class="eyebrow">Birth Rate</p>
                 <label>Target per hour<input id="birth-rate" type="number" value="18" /></label>
                 <div class="actions">
                   <button class="primary" type="submit">Apply</button>
                   <button class="ghost" type="button" id="audit-log">View audit</button>
                 </div>
                 <p class="status" id="admin-status">Idle</p>
+              </form>
+              <form id="auction-form" class="stack">
+                <p class="eyebrow">Auctions</p>
+                <label>Action<textarea id="auction-action">Pause secondary markets</textarea></label>
+                <div class="actions">
+                  <button class="primary" type="submit">Send</button>
+                  <p class="status" id="auction-status">Idle</p>
+                </div>
+              </form>
+              <form id="token-form" class="stack">
+                <p class="eyebrow">Token actions</p>
+                <label>Instruction<textarea id="token-action">Throttle token minting</textarea></label>
+                <div class="actions">
+                  <button class="primary" type="submit">Send</button>
+                  <p class="status" id="token-status">Idle</p>
+                </div>
               </form>
             </div>
           </div>
