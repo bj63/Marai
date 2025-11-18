@@ -165,6 +165,7 @@
       </div>
     </div>
 
+    <script src="shared.js"></script>
     <script>
       const traitRows = Array.from(document.querySelectorAll(".trait-row"));
       const nameField = document.getElementById("name-field");
@@ -173,6 +174,14 @@
       const saveStatus = document.getElementById("save-status");
       const useDefaults = document.getElementById("use-defaults");
       const nameSpark = document.getElementById("name-spark");
+
+      function collectTraits() {
+        return traitRows.reduce((acc, row) => {
+          const input = row.querySelector('input');
+          acc[input.id] = Number(input.value);
+          return acc;
+        }, {});
+      }
 
       traitRows.forEach((row) => {
         const input = row.querySelector("input");
@@ -193,16 +202,29 @@
         saveStatus.textContent = "Suggested name applied.";
       });
 
-      confirmBtn.addEventListener("click", () => {
+      async function savePersona() {
+        const payload = {
+          name: nameField.value,
+          bio: bioField.value,
+          traits: collectTraits(),
+        };
+        const reset = optimisticState(confirmBtn, 'Saving…', 'Confirm & Create');
         saveStatus.textContent = "Saving persona…";
-        confirmBtn.disabled = true;
-        confirmBtn.classList.add("opacity-80");
-        setTimeout(() => {
-          saveStatus.textContent = "Persona saved and synced to profile.";
-          confirmBtn.disabled = false;
-          confirmBtn.classList.remove("opacity-80");
-        }, 1200);
-      });
+        try {
+          await apiRequest('/api/marai/persona', { method: 'POST', body: payload });
+          await apiRequest('/api/profile', { method: 'PATCH', body: { theme: 'neon', defaults: payload.traits } });
+          saveStatus.textContent = "Persona saved and profile updated.";
+          showToast('Persona confirmed — profile patched', 'success');
+          setTimeout(() => (window.location.href = 'feed.html'), 800);
+        } catch (error) {
+          saveStatus.textContent = error.message || 'Unable to save persona';
+          showToast(error.message || 'Save failed', 'error');
+        } finally {
+          reset();
+        }
+      }
+
+      confirmBtn.addEventListener("click", savePersona);
 
       useDefaults.addEventListener("click", () => {
         nameField.value = "Aura";
