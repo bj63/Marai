@@ -1,14 +1,11 @@
 const panels = document.querySelectorAll('.panel');
 const navButtons = document.querySelectorAll('.nav-btn');
 const renderCache = new Map();
-const featureFlags = {
-  brandHub: true,
-  adminPanel: true,
-};
+const featureFlags = runtimeConfig.featureFlags;
 
 const currentUser = {
-  name: 'Lyra Ops',
-  roles: ['admin'],
+  name: runtimeConfig.currentUserName || 'Lyra Ops',
+  roles: runtimeConfig.roles.length ? runtimeConfig.roles : ['member'],
 };
 
 const analyticsBuffer = [];
@@ -76,6 +73,15 @@ function isSectionEnabled(target) {
 
 function hasAdminRole() {
   return currentUser.roles.includes('admin');
+}
+
+function requireAdminGuard(statusNode) {
+  if (hasAdminRole()) return true;
+  const message = 'Access denied: admin role required';
+  statusNode.textContent = message;
+  showToast(message, 'error');
+  logAnalytics('admin_guard_block', { screen: 'admin' });
+  return false;
 }
 
 function logAnalytics(event, metadata = {}) {
@@ -178,7 +184,18 @@ authForm.addEventListener('submit', (e) => {
   e.preventDefault();
   authStatus.textContent = 'Authenticating…';
   logAnalytics('onboarding_flow', { step: 'login_submit' });
-  guardedJob('Login', () => simulateApi('/api/auth/login')).then(() => {
+  let email;
+  let password;
+  try {
+    email = sanitizeInput(authForm.querySelector('input[type="email"]').value, { maxLength: 120 });
+    password = sanitizeInput(authForm.querySelector('input[type="password"]').value, {
+      maxLength: 72,
+    });
+  } catch (error) {
+    authStatus.textContent = error.message;
+    return;
+  }
+  guardedJob('Login', () => simulateApi('/api/auth/login', { email, password })).then(() => {
     authStatus.textContent = 'Session created + profile bootstrapped';
     logAnalytics('onboarding_complete', { method: 'login' });
   });
@@ -187,7 +204,14 @@ authForm.addEventListener('submit', (e) => {
 registerBtn.addEventListener('click', () => {
   authStatus.textContent = 'Registering new session…';
   logAnalytics('onboarding_flow', { step: 'register' });
-  guardedJob('Registration', () => simulateApi('/api/auth/register')).then(() => {
+  let email;
+  try {
+    email = sanitizeInput(authForm.querySelector('input[type="email"]').value, { maxLength: 120 });
+  } catch (error) {
+    authStatus.textContent = error.message;
+    return;
+  }
+  guardedJob('Registration', () => simulateApi('/api/auth/register', { email })).then(() => {
     authStatus.textContent = 'Registered + bootstrap payload returned';
     logAnalytics('onboarding_complete', { method: 'register' });
   });
@@ -196,6 +220,12 @@ registerBtn.addEventListener('click', () => {
 avatarUpload.addEventListener('change', (e) => {
   const file = e.target.files?.[0];
   if (file) {
+    if (file.size > runtimeConfig.maxUploadBytes) {
+      avatarPreview.textContent = 'Upload blocked: file exceeds size limit';
+      showToast(`Max upload size is ${Math.round(runtimeConfig.maxUploadBytes / 1024 / 1024)}MB`, 'error');
+      avatarUpload.value = '';
+      return;
+    }
     avatarPreview.textContent = `Uploaded: ${file.name}`;
   }
 });
@@ -251,8 +281,8 @@ persistThemeBtn.addEventListener('click', () => {
 
 function collectPersona() {
   return {
-    name: document.getElementById('persona-name').value,
-    description: document.getElementById('persona-desc').value,
+    name: sanitizeInput(document.getElementById('persona-name').value, { maxLength: 80 }),
+    description: sanitizeInput(document.getElementById('persona-desc').value, { maxLength: 280 }),
     traits: Object.fromEntries(
       [...personaForm.querySelectorAll('.slider-row')].map((row) => [
         row.dataset.trait,
@@ -269,8 +299,15 @@ function simulateApi(endpoint, payload = {}, response = {}) {
     showToast(`${endpoint} queued until back online`, 'error');
     return Promise.reject(new Error('Offline – queued'));
   }
+  const endpointUrl = resolveApiUrl(endpoint);
+  try {
+    assertCorsAllowed(endpointUrl);
+  } catch (error) {
+    showToast(error.message, 'error');
+    return Promise.reject(error);
+  }
   return new Promise((resolve) => {
-    console.log('Mock API', endpoint, payload);
+    console.log('Mock API', endpointUrl, payload);
     setTimeout(() => resolve(response), 600);
   });
 }
@@ -458,7 +495,13 @@ chatHistory.forEach((entry) => pushMessage(entry.sender, entry.text, true));
 
 chatForm.addEventListener('submit', (e) => {
   e.preventDefault();
-  const message = chatInput.value.trim();
+  let message = '';
+  try {
+    message = sanitizeInput(chatInput.value, { maxLength: 240 });
+  } catch (error) {
+    showToast(error.message, 'error');
+    return;
+  }
   if (!message) return;
   logAnalytics('chat_message', { type: 'user', tone: toneSelect.value });
   pushMessage('user', message);
@@ -639,23 +682,28 @@ function renderMemory() {
   });
 }
 
+function evaluateFriendAiGate(conn) {
+  const friend = conn.youFollow && conn.followsYou;
+  const innerCircle = friend && conn.youInner && conn.theyInner;
+  const allowed =
+    friend &&
+    innerCircle &&
+    conn.aiChatOptIn &&
+    aiChatSettings.youAllowFriendAiChat;
+  const blockReason = !friend
+    ? 'Not friends yet'
+    : !(conn.youInner && conn.theyInner)
+    ? 'Both must add to Inner Circle'
+    : !aiChatSettings.youAllowFriendAiChat || !conn.aiChatOptIn
+    ? 'One side disabled Friend AI chat'
+    : '';
+  return { allowed, blockReason, friend, innerCircle };
+}
+
 function renderAiChatRules() {
   aiChatRules.innerHTML = '';
   socialConnections.forEach((conn) => {
-    const friend = conn.youFollow && conn.followsYou;
-    const innerCircle = friend && conn.youInner && conn.theyInner;
-    const allowed =
-      friend &&
-      innerCircle &&
-      conn.aiChatOptIn &&
-      aiChatSettings.youAllowFriendAiChat;
-    const blockReason = !friend
-      ? 'Not friends yet'
-      : !(conn.youInner && conn.theyInner)
-      ? 'Both must add to Inner Circle'
-      : !aiChatSettings.youAllowFriendAiChat || !conn.aiChatOptIn
-      ? 'One side disabled Friend AI chat'
-      : '';
+    const { allowed, blockReason, friend, innerCircle } = evaluateFriendAiGate(conn);
     const card = document.createElement('div');
     card.className = 'relationship-card';
     card.innerHTML = `
@@ -675,10 +723,34 @@ function renderAiChatRules() {
         <span class="state-pill ${aiChatSettings.youAllowFriendAiChat ? 'on' : ''}">You allow AI chat</span>
       </div>
       <p class="status">${allowed ? '🟢 Allowed for Friend AI chat' : `🔴 ${blockReason}`}</p>
+      <button class="ghost" data-action="friend-chat" data-id="${conn.id}" ${allowed ? '' : 'data-blocked="true"'}>
+        ${allowed ? 'Start Friend AI chat' : 'Request Inner Circle'}</button>
     `;
     aiChatRules.appendChild(card);
   });
 }
+
+aiChatRules.addEventListener('click', (event) => {
+  const btn = event.target.closest('button[data-action="friend-chat"]');
+  if (!btn) return;
+  const conn = socialConnections.find((c) => c.id === btn.dataset.id);
+  if (!conn) return;
+  const { allowed, blockReason } = evaluateFriendAiGate(conn);
+  if (!allowed) {
+    showToast(blockReason || 'Friend AI chat blocked', 'error');
+    logAnalytics('friend_ai_chat_block', { id: conn.id, reason: blockReason });
+    return;
+  }
+  pushMessage(
+    'ai',
+    `Starting Friend AI chat with ${conn.name} — inner circle + opt-in verified.`,
+    true
+  );
+  simulateApi(`/api/friend-ai/${conn.id}/chat-session`).then(() => {
+    pushMessage('ai', `${conn.name} is ready to chat privately.`);
+    logAnalytics('friend_ai_chat_start', { id: conn.id });
+  });
+});
 
 function renderDiscovery() {
   discoveryList.innerHTML = '';
@@ -785,8 +857,15 @@ function renderExplore(filter = 'all') {
 
 exploreForm.addEventListener('submit', (e) => {
   e.preventDefault();
-  const category = exploreCategory.value;
-  const cursor = exploreCursor.value || 'latest';
+  let category = 'all';
+  let cursor = 'latest';
+  try {
+    category = sanitizeInput(exploreCategory.value || 'all', { maxLength: 24 });
+    cursor = sanitizeInput(exploreCursor.value || 'latest', { maxLength: 64 });
+  } catch (error) {
+    exploreStatus.textContent = error.message;
+    return;
+  }
   exploreStatus.textContent = `GET /api/explore?category=${category}&cursor=${cursor}`;
   simulateApi(`/api/explore?category=${category}&cursor=${cursor}`).then(() => {
     exploreStatus.textContent = `Loaded ${category} feed from cursor ${cursor}`;
@@ -971,8 +1050,17 @@ function renderPresets() {
 
 videoJobForm.addEventListener('submit', (e) => {
   e.preventDefault();
+  let prompt = '';
+  let resolution = '';
+  try {
+    prompt = sanitizeInput(videoPrompt.value, { maxLength: 240 });
+    resolution = sanitizeInput(videoResolution.value, { maxLength: 20 });
+  } catch (error) {
+    videoJobStatus.textContent = error.message;
+    return;
+  }
   videoJobStatus.textContent = 'POST /api/video-jobs';
-  simulateApi('/api/video-jobs', { prompt: videoPrompt.value, resolution: videoResolution.value }).then(() => {
+  simulateApi('/api/video-jobs', { prompt, resolution }).then(() => {
     currentJobId = `job_${Date.now()}`;
     videoJobStatus.textContent = `Submitted as ${currentJobId}`;
     videoJobIdEl.textContent = `Job ID ${currentJobId}`;
@@ -1003,10 +1091,19 @@ videoExportBtn.addEventListener('click', () => {
 
 presetForm.addEventListener('submit', (e) => {
   e.preventDefault();
+  let name = '';
+  let style = '';
+  try {
+    name = sanitizeInput(presetName.value, { maxLength: 60 });
+    style = sanitizeInput(presetStyle.value, { maxLength: 60 });
+  } catch (error) {
+    presetStatus.textContent = error.message;
+    return;
+  }
   presetStatus.textContent = 'POST /api/video-presets';
-  simulateApi('/api/video-presets', { name: presetName.value, style: presetStyle.value }).then(() => {
+  simulateApi('/api/video-presets', { name, style }).then(() => {
     presetStatus.textContent = 'Preset saved';
-    presets = [...presets, [presetName.value, presetStyle.value]];
+    presets = [...presets, [name, style]];
     renderPresets();
   });
 });
@@ -1031,12 +1128,14 @@ let adminHydrated = false;
 
 function hydrateAdmin() {
   if (adminHydrated) return;
+  if (!requireAdminGuard(adminStatus)) return;
   fetchAdminOverview();
   fetchPersonaClusters();
   adminHydrated = true;
 }
 
 function fetchAdminOverview() {
+  if (!requireAdminGuard(adminStatus)) return;
   adminOverviewStatus.textContent = 'GET /api/admin/overview…';
   const mockResponse = {
     metrics: [
@@ -1066,6 +1165,7 @@ function fetchAdminOverview() {
 }
 
 function fetchPersonaClusters() {
+  if (!requireAdminGuard(adminStatus)) return;
   clusterStatus.textContent = 'GET /api/admin/persona-clusters…';
   const mockClusters = {
     clusters: [
@@ -1089,13 +1189,12 @@ function fetchPersonaClusters() {
 
 adminSearchForm.addEventListener('submit', (e) => {
   e.preventDefault();
-  if (!hasAdminRole()) {
-    adminSearchStatus.textContent = 'Search blocked: admin role required';
-    return;
-  }
-  const query = document.getElementById('admin-search').value.trim();
-  if (!query) {
-    adminSearchStatus.textContent = 'Enter a query to search';
+  if (!requireAdminGuard(adminStatus)) return;
+  let query = '';
+  try {
+    query = sanitizeInput(document.getElementById('admin-search').value, { maxLength: 120 });
+  } catch (error) {
+    adminSearchStatus.textContent = error.message;
     return;
   }
   adminSearchStatus.textContent = 'GET /api/admin/search…';
@@ -1125,9 +1224,15 @@ adminSearchForm.addEventListener('submit', (e) => {
 
 birthForm.addEventListener('submit', (e) => {
   e.preventDefault();
+  const rawValue = document.getElementById('birth-rate').value;
+  const target = Number(rawValue);
+  if (Number.isNaN(target)) {
+    adminStatus.textContent = 'Enter a numeric birth rate';
+    return;
+  }
   confirmAndSend(
     '/api/admin/birth-rate',
-    { target: Number(document.getElementById('birth-rate').value) },
+    { target },
     adminStatus,
     'Apply new birth rate with audit logging?'
   );
@@ -1154,15 +1259,13 @@ tokenForm.addEventListener('submit', (e) => {
 });
 
 document.getElementById('audit-log').addEventListener('click', () => {
+  if (!requireAdminGuard(adminStatus)) return;
   adminStatus.textContent = 'Audit log downloaded';
   logAnalytics('admin_fetch', { endpoint: '/api/admin/audit-log' });
 });
 
 function confirmAndSend(endpoint, payload, statusEl, confirmation) {
-  if (!hasAdminRole()) {
-    statusEl.textContent = 'Blocked: admin role required';
-    return;
-  }
+  if (!requireAdminGuard(statusEl)) return;
   const confirmed = window.confirm(confirmation);
   if (!confirmed) {
     statusEl.textContent = 'Cancelled';

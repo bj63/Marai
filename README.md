@@ -4,19 +4,23 @@ This repository contains a static, dependency-free prototype for the MarAI exper
 
 ## Running locally
 
-Create a `.env` file (see `.env.example`) so the prototype can authenticate against a live API. The UI reads
-`NEXT_PUBLIC_API_BASE_URL` and `NEXT_PUBLIC_API_KEY` for all `/api/auth/*`, `/api/avatar/*`, feed, chat, and graph calls.
+- Copy `.env.example` to `.env` and set `NEXT_PUBLIC_API_BASE_URL` / `NEXT_PUBLIC_API_KEY` for real API calls.
+- Serve the static prototype from `frontend/` (no build step required). Examples:
+  - `python -m http.server 4173 --directory frontend`
+  - `npx serve frontend`
+- To override the API base URL or feature flags at runtime, provide a `<script id="marai-config" type="application/json">` block before `shared.js` with keys such as `apiBaseUrl`, `featureFlags.brandHub`, `featureFlags.adminPanel`, `roles`, `corsAllowedOrigins`, and `maxUploadBytes`.
 
-No build step is required.
+Key entry points:
+- `frontend/landing.html` – branded splash hero with Tailwind CSS and CTA links.
+- `frontend/index.html` – layout and feature sections for each major surface.
+- `frontend/avatar-creator.html` – standalone avatar upload + style selection experience.
+- `frontend/persona-confirmation.html` – persona naming and trait tuning step for MarAI.
+- `frontend/feed.html` – dedicated feed surface with cards, dialogues, and skeleton loading.
+- `frontend/renai-card.html` – RenAI profile view highlighting evolution, charts, and badges.
+- `frontend/chat.html` – chat canvas with quick actions, streaming indicator, and input controls.
+- `frontend/index.html` – Social graph section now includes Follow/Friend layers, Inner Circle, AI-aware relational memory, Friend AI chat guardrails, and TikTok-style discovery.
 
-- Open `frontend/landing.html` for the branded splash hero that links into the prototype.
-- Open `frontend/index.html` to explore the full prototype UI.
-- Open `frontend/avatar-creator.html` to try the guided avatar upload + style selection screen.
-- Open `frontend/persona-confirmation.html` to finalize persona naming, bio, and core traits.
-- Open `frontend/feed.html` to view the feed cards and skeleton loaders.
-- Open `frontend/renai-card.html` to browse a RenAI profile card with evolution metrics.
-- Open `frontend/chat.html` for the chat interface with quick actions and typing states.
-- Use `frontend/index.html` → Social Graph panel to exercise layered Follow/Friend, Inner Circle, AI-aware friendship memory, Friend AI chat gates, and mutual discovery signals.
+See `docs/ops.md` for environment variables, runtime config examples, and a smoke-test checklist.
 
 ## Structure
 - `frontend/landing.html` – branded splash hero with Tailwind CSS and CTA links.

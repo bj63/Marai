@@ -1,3 +1,42 @@
+const defaultFeatureFlags = { brandHub: true, adminPanel: true };
+
+function parseInlineConfig() {
+  const script = document.getElementById('marai-config');
+  if (!script?.textContent) return {};
+  try {
+    return JSON.parse(script.textContent);
+  } catch (error) {
+    console.warn('Failed to parse marai-config script', error);
+    return {};
+  }
+}
+
+const runtimeConfig = (() => {
+  const windowConfig = typeof window !== 'undefined' ? window.__MARAI_CONFIG || {} : {};
+  const inlineConfig = parseInlineConfig();
+  const merged = { ...inlineConfig, ...windowConfig };
+
+  const featureFlags = { ...defaultFeatureFlags, ...(merged.featureFlags || {}) };
+  const roles = Array.isArray(merged.roles)
+    ? merged.roles
+    : Array.isArray(merged.userRoles)
+    ? merged.userRoles
+    : [];
+
+  const apiBase = (merged.apiBaseUrl || merged.API_BASE_URL || merged.baseUrl || 'http://localhost:3000').replace(/\/$/, '');
+
+  return {
+    apiBaseUrl: apiBase,
+    featureFlags,
+    roles: roles.length ? roles : ['member'],
+    corsAllowedOrigins: merged.corsAllowedOrigins || [window.location.origin],
+    maxUploadBytes: merged.maxUploadBytes || 5 * 1024 * 1024,
+    allowLocalStorageTokens: Boolean(merged.allowLocalStorageTokens),
+  };
+})();
+
+window.__maraiRuntimeConfig = runtimeConfig;
+
 const toastContainerId = 'toast-layer';
 const tokenStorageKey = 'marai.auth.tokens';
 const profileStorageKey = 'marai.profile';
@@ -53,6 +92,30 @@ function resolveCdnPath(path) {
   return `${cdnBaseUrl}${path}`;
 }
 
+function resolveApiUrl(path = '') {
+  if (!path) return runtimeConfig.apiBaseUrl;
+  if (path.startsWith('http')) return path;
+  return `${runtimeConfig.apiBaseUrl}${path.startsWith('/') ? path : `/${path}`}`;
+}
+
+function assertCorsAllowed(url) {
+  try {
+    const origin = new URL(url).origin;
+    if (!runtimeConfig.corsAllowedOrigins.includes(origin)) {
+      throw new Error(`Blocked by CORS allowlist: ${origin}`);
+    }
+  } catch (error) {
+    throw error instanceof Error ? error : new Error('CORS validation failed');
+  }
+}
+
+function sanitizeInput(value, { maxLength = 256, allowEmpty = false } = {}) {
+  const trimmed = value?.toString().trim() || '';
+  if (!trimmed && !allowEmpty) throw new Error('Input required');
+  if (trimmed.length > maxLength) throw new Error(`Input too long (max ${maxLength} chars)`);
+  return trimmed.replace(/[<>]/g, '');
+}
+
 function setupNetworkMonitoring(onChange) {
   const notify = () => onChange(navigator.onLine);
   window.addEventListener('online', notify);
@@ -103,13 +166,15 @@ async function apiRequest(
 ) {
   let attempt = 0;
   let lastError = null;
+  const endpointUrl = resolveApiUrl(endpoint);
 
   while (attempt <= retries) {
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), timeoutMs);
 
     try {
-      const response = await fetch(endpoint, {
+      assertCorsAllowed(endpointUrl);
+      const response = await fetch(endpointUrl, {
         method,
         body: body instanceof FormData ? body : body ? JSON.stringify(body) : undefined,
         headers: body instanceof FormData
@@ -253,7 +318,10 @@ function simulateApiResponse(endpoint, body) {
 }
 
 function persistTokens(tokens) {
-  localStorage.setItem(tokenStorageKey, JSON.stringify(tokens));
+  sessionStorage.setItem(tokenStorageKey, JSON.stringify(tokens));
+  if (runtimeConfig.allowLocalStorageTokens) {
+    localStorage.setItem(tokenStorageKey, JSON.stringify(tokens));
+  }
 }
 
 function persistProfile(profile) {
