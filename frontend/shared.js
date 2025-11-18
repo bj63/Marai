@@ -1,31 +1,91 @@
-const toastContainerId = 'toast-container';
+const toastContainerId = 'toast-layer';
 const tokenStorageKey = 'marai.auth.tokens';
 const profileStorageKey = 'marai.profile';
+const cdnBaseUrl = 'https://cdn.marai.gg';
+
+const retryQueue = [];
 
 function ensureToastContainer() {
   let container = document.getElementById(toastContainerId);
   if (!container) {
     container = document.createElement('div');
     container.id = toastContainerId;
-    container.className = 'fixed inset-x-0 top-4 z-50 flex flex-col items-center gap-2 px-4';
+    container.className = 'toast-layer';
+    container.setAttribute('role', 'log');
+    container.setAttribute('aria-live', 'polite');
     document.body.appendChild(container);
   }
   return container;
 }
 
-function showToast(message, type = 'info') {
+function showToast(message, type = 'info', actionLabel, onAction) {
   const container = ensureToastContainer();
   const toast = document.createElement('div');
-  toast.className = `flex items-center gap-2 rounded-xl px-4 py-3 shadow-lg max-w-xl w-full text-sm font-semibold ${
-    type === 'error'
-      ? 'bg-red-600/90 text-white'
-      : type === 'success'
-      ? 'bg-emerald-600/90 text-white'
-      : 'bg-white/90 text-black dark:bg-white/10 dark:text-white'
-  }`;
-  toast.textContent = message;
+  toast.className = `toast ${type === 'error' ? 'error' : type === 'success' ? 'success' : ''}`;
+  const icon = document.createElement('span');
+  icon.setAttribute('aria-hidden', 'true');
+  icon.textContent = type === 'error' ? '⚠️' : type === 'success' ? '✅' : 'ℹ️';
+  const text = document.createElement('div');
+  text.textContent = message;
+  text.className = 'spring-transition';
+  toast.appendChild(icon);
+  toast.appendChild(text);
+  if (actionLabel && onAction) {
+    const button = document.createElement('button');
+    button.textContent = actionLabel;
+    button.addEventListener('click', () => {
+      onAction();
+      toast.remove();
+    });
+    toast.appendChild(button);
+  } else {
+    const dismiss = document.createElement('button');
+    dismiss.textContent = 'Close';
+    dismiss.addEventListener('click', () => toast.remove());
+    toast.appendChild(dismiss);
+  }
   container.appendChild(toast);
-  setTimeout(() => toast.remove(), 3200);
+  setTimeout(() => toast.remove(), 3600);
+}
+
+function resolveCdnPath(path) {
+  return `${cdnBaseUrl}${path}`;
+}
+
+function setupNetworkMonitoring(onChange) {
+  const notify = () => onChange(navigator.onLine);
+  window.addEventListener('online', notify);
+  window.addEventListener('offline', notify);
+  notify();
+}
+
+function enqueueRetry(job) {
+  retryQueue.push(job);
+  return [...retryQueue];
+}
+
+function getRetryQueue() {
+  return [...retryQueue];
+}
+
+function drainRetryQueue() {
+  const pending = [...retryQueue];
+  retryQueue.length = 0;
+  return Promise.allSettled(pending.map((job) => job()))
+    .then((results) => {
+      const failed = results.filter((r) => r.status === 'rejected');
+      failed.forEach((entry) => retryQueue.push(() => Promise.reject(entry.reason)));
+      return { results, remaining: [...retryQueue] };
+    })
+    .catch(() => ({ results: [], remaining: [...retryQueue] }));
+}
+
+function lazyLoadMedia(selector) {
+  document.querySelectorAll(selector).forEach((el) => {
+    if ('loading' in el) {
+      el.loading = 'lazy';
+    }
+  });
 }
 
 async function apiRequest(endpoint, { method = 'GET', body, headers = {}, mockFallback = true } = {}) {

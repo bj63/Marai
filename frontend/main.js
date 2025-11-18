@@ -1,5 +1,6 @@
 const panels = document.querySelectorAll('.panel');
 const navButtons = document.querySelectorAll('.nav-btn');
+const renderCache = new Map();
 const featureFlags = {
   brandHub: true,
   adminPanel: true,
@@ -10,22 +11,31 @@ const currentUser = {
   roles: ['admin'],
 };
 
+const offlineBanner = document.getElementById('offline-banner');
+const retryQueuedBtn = document.getElementById('retry-queued');
+const retryQueueStatus = document.getElementById('retry-queue-status');
+const retryQueueList = document.getElementById('retry-queue-list');
+
 const helperFlagStatus = document.getElementById('flag-status');
 const helperFlagBrand = document.getElementById('flag-brand-hub');
 const helperFlagAdmin = document.getElementById('flag-admin-panel');
 
 applyFeatureFlags();
+updateQueueUI();
 
-navButtons.forEach((btn) =>
+navButtons.forEach((btn) => {
+  btn.setAttribute('aria-controls', btn.dataset.target);
   btn.addEventListener('click', () => {
     const target = btn.dataset.target;
     if (!isSectionEnabled(target)) {
       helperFlagStatus.textContent = `${target} disabled by feature flag`;
+      showToast(`${target} is disabled by feature flag`, 'error');
       logAnalytics('screen_blocked', { screen: target, reason: 'feature_flag' });
       return;
     }
     if (target === 'admin' && !hasAdminRole()) {
       document.getElementById('admin-status').textContent = 'Access denied: admin role required';
+      showToast('Admin role required', 'error');
       logAnalytics('screen_blocked', { screen: 'admin', reason: 'role_guard' });
       return;
     }
@@ -37,8 +47,8 @@ navButtons.forEach((btn) =>
     if (target === 'admin') {
       hydrateAdmin();
     }
-  })
-);
+  });
+});
 
 logAnalytics('screen_view', { screen: 'onboarding' });
 
@@ -66,6 +76,67 @@ function logAnalytics(event, metadata = {}) {
   console.log('[analytics]', event, metadata);
 }
 
+function updateQueueUI(queue = getRetryQueue()) {
+  if (!retryQueueStatus || !retryQueueList) return;
+  retryQueueList.innerHTML = '';
+  if (!queue.length) {
+    retryQueueStatus.textContent = 'No queued jobs';
+    return;
+  }
+  retryQueueStatus.textContent = `${queue.length} job(s) waiting`;
+  queue.forEach((job, idx) => {
+    const row = document.createElement('li');
+    row.className = 'stat-item';
+    row.textContent = `Job ${idx + 1} · pending retry`;
+    retryQueueList.appendChild(row);
+  });
+}
+
+function handleDrainQueue() {
+  drainRetryQueue().then(({ remaining }) => {
+    updateQueueUI(remaining);
+    if (remaining.length) {
+      showToast('Some jobs still need attention.', 'error');
+    } else {
+      showToast('Queued jobs retried.', 'success');
+    }
+  });
+}
+
+function handleNetworkChange(isOnline) {
+  if (!offlineBanner) return;
+  offlineBanner.classList.toggle('active', !isOnline);
+  offlineBanner.setAttribute('aria-hidden', isOnline);
+  if (!isOnline) {
+    showToast('Offline detected — actions will be queued.', 'error');
+  } else {
+    showToast('Back online — replaying queued actions.', 'success');
+    handleDrainQueue();
+  }
+}
+
+setupNetworkMonitoring(handleNetworkChange);
+lazyLoadMedia('img');
+retryQueuedBtn?.addEventListener('click', handleDrainQueue);
+window.addEventListener('unhandledrejection', (event) => {
+  event.preventDefault();
+  showToast(event.reason?.message || 'Request queued for retry', 'error');
+});
+
+function guardedJob(label, executor, onSuccess) {
+  return executor()
+    .then((res) => {
+      onSuccess?.(res);
+      return res;
+    })
+    .catch((error) => {
+      const queue = enqueueRetry(() => executor().then(onSuccess));
+      updateQueueUI(queue);
+      showToast(`${label} queued: ${error.message || 'Offline'}`, 'error', 'Retry now', handleDrainQueue);
+      throw error;
+    });
+}
+
 // Onboarding
 const authForm = document.getElementById('auth-form');
 const registerBtn = document.getElementById('register-btn');
@@ -82,14 +153,14 @@ const persistThemeBtn = document.getElementById('persist-theme');
 authForm.addEventListener('submit', (e) => {
   e.preventDefault();
   authStatus.textContent = 'Authenticating…';
-  simulateApi('/api/auth/login').then(() => {
+  guardedJob('Login', () => simulateApi('/api/auth/login')).then(() => {
     authStatus.textContent = 'Session created + profile bootstrapped';
   });
 });
 
 registerBtn.addEventListener('click', () => {
   authStatus.textContent = 'Registering new session…';
-  simulateApi('/api/auth/register').then(() => {
+  guardedJob('Registration', () => simulateApi('/api/auth/register')).then(() => {
     authStatus.textContent = 'Registered + bootstrap payload returned';
   });
 });
@@ -104,10 +175,21 @@ avatarUpload.addEventListener('change', (e) => {
 document.getElementById('generate-avatar').addEventListener('click', () => {
   avatarStatus.textContent = 'Submitting generation…';
   avatarProgress.style.width = '18%';
-  simulateStreamingProgress(avatarProgress, [18, 45, 70, 100]).then(() => {
-    avatarStatus.textContent = `Generated in ${avatarStyle.value} style`; 
-    avatarPreview.textContent = '✨ Avatar ready — live preview';
-  });
+  guardedJob(
+    'Avatar render',
+    () =>
+      new Promise((resolve, reject) => {
+        if (!navigator.onLine) {
+          reject(new Error('Offline – queued'));
+          return;
+        }
+        simulateStreamingProgress(avatarProgress, [18, 45, 70, 100]).then(resolve);
+      }),
+    () => {
+      avatarStatus.textContent = `Generated in ${avatarStyle.value} style`;
+      avatarPreview.textContent = '✨ Avatar ready — live preview';
+    }
+  );
 });
 
 document.getElementById('retry-avatar').addEventListener('click', () => {
@@ -126,14 +208,14 @@ personaForm.addEventListener('submit', (e) => {
   e.preventDefault();
   personaStatus.textContent = 'Saving persona…';
   const payload = collectPersona();
-  simulateApi('/api/marai/persona', payload).then(() => {
+  guardedJob('Persona save', () => simulateApi('/api/marai/persona', payload)).then(() => {
     personaStatus.textContent = 'Persona + MarAI config persisted';
   });
 });
 
 persistThemeBtn.addEventListener('click', () => {
   personaStatus.textContent = 'Persisting theme + defaults…';
-  simulateApi('/api/profile').then(() => {
+  guardedJob('Theme persist', () => simulateApi('/api/profile')).then(() => {
     personaStatus.textContent = 'Theme saved to profile';
   });
 });
@@ -152,6 +234,12 @@ function collectPersona() {
 }
 
 function simulateApi(endpoint, payload = {}, response = {}) {
+  if (!navigator.onLine) {
+    const queued = enqueueRetry(() => simulateApi(endpoint, payload, response));
+    updateQueueUI(queued);
+    showToast(`${endpoint} queued until back online`, 'error');
+    return Promise.reject(new Error('Offline – queued'));
+  }
   return new Promise((resolve) => {
     console.log('Mock API', endpoint, payload);
     setTimeout(() => resolve(response), 600);
@@ -216,6 +304,9 @@ const sampleFeed = [
 ];
 
 function renderFeed() {
+  const hash = JSON.stringify(sampleFeed);
+  if (renderCache.get('feed') === hash) return;
+  renderCache.set('feed', hash);
   feedList.innerHTML = '';
   sampleFeed.forEach((post) => {
     const card = document.createElement('div');
@@ -256,11 +347,15 @@ feedList.addEventListener('click', (e) => {
     ? '/api/post/regenerate'
     : '/api/post/dream';
   btn.textContent = '…optimistic';
-  simulateApi(`${action}/${id}`).then(() => {
-    btn.textContent = btn.textContent.replace('…optimistic', 'Done');
-    post.reactions += 1;
-    renderFeed();
-  });
+  simulateApi(`${action}/${id}`)
+    .then(() => {
+      btn.textContent = btn.textContent.replace('…optimistic', 'Done');
+      post.reactions += 1;
+      renderFeed();
+    })
+    .catch(() => {
+      btn.textContent = 'Retry queued';
+    });
 });
 
 renderFeed();
