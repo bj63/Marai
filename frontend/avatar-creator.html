@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html class="dark" lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta content="width=device-width, initial-scale=1.0" name="viewport" />
+    <title>MarAI Avatar Creator</title>
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link crossorigin href="https://fonts.gstatic.com" rel="preconnect" />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&display=swap"
+      rel="stylesheet"
+    />
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined" rel="stylesheet" />
+    <style>
+      .material-symbols-outlined {
+        font-variation-settings:
+          "FILL" 0,
+          "wght" 400,
+          "GRAD" 0,
+          "opsz" 24;
+      }
+    </style>
+    <script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              primary: "#ee2bcd",
+              "background-light": "#f8f6f8",
+              "background-dark": "#22101f",
+            },
+            fontFamily: {
+              display: ["Space Grotesk", "sans-serif"],
+            },
+            borderRadius: { DEFAULT: "1rem", lg: "2rem", xl: "3rem", full: "9999px" },
+          },
+        },
+      };
+    </script>
+    <style>
+      body {
+        min-height: max(884px, 100dvh);
+      }
+    </style>
+  </head>
+  <body class="bg-background-light dark:bg-background-dark font-display">
+    <div class="relative flex h-auto min-h-screen w-full flex-col">
+      <!-- Top App Bar -->
+      <div class="flex items-center p-4 pb-2 justify-between shrink-0">
+        <a href="landing.html" class="flex size-10 items-center justify-center text-white dark:text-white/80">
+          <span class="material-symbols-outlined text-2xl">arrow_back</span>
+        </a>
+        <h1 class="text-black dark:text-white text-lg font-bold leading-tight tracking-[-0.015em] flex-1 text-center">
+          Create Your Avatar
+        </h1>
+        <div class="size-10"></div>
+      </div>
+
+      <div class="flex flex-col flex-1 p-4">
+        <!-- Live Preview -->
+        <div class="flex flex-col items-center justify-center w-full aspect-square bg-background-dark/30 dark:bg-background-dark/80 rounded-xl mb-6 p-6">
+          <div class="flex flex-col items-center gap-4 text-center" id="preview-slot">
+            <div class="flex items-center justify-center size-24 bg-primary/20 rounded-full">
+              <span class="material-symbols-outlined text-5xl text-primary">face_6</span>
+            </div>
+            <p class="text-black/70 dark:text-white/70 text-base font-normal leading-normal max-w-xs">
+              Your generated avatar will appear here
+            </p>
+          </div>
+        </div>
+
+        <!-- Upload Photo Section -->
+        <div class="space-y-1">
+          <h2 class="text-black dark:text-white tracking-light text-2xl font-bold leading-tight text-left">1. Upload a Photo</h2>
+          <p class="text-black/60 dark:text-white/60 text-base font-normal leading-normal pb-4">
+            Upload a clear photo of your face.
+          </p>
+        </div>
+        <label
+          class="flex items-center justify-between w-full p-4 bg-background-light dark:bg-white/5 border border-black/10 dark:border-white/10 rounded-lg text-left mb-6 cursor-pointer"
+          for="photo-input"
+        >
+          <div class="flex items-center gap-4">
+            <div class="flex items-center justify-center size-12 bg-primary/20 rounded-full">
+              <span class="material-symbols-outlined text-primary">add_a_photo</span>
+            </div>
+            <div class="flex flex-col">
+              <span class="font-bold text-black dark:text-white">Tap to Select Image</span>
+              <span class="text-sm text-black/60 dark:text-white/60" id="photo-label">No photo selected</span>
+            </div>
+          </div>
+          <span class="material-symbols-outlined text-black/50 dark:text-white/50">chevron_right</span>
+          <input id="photo-input" type="file" accept="image/*" class="hidden" />
+        </label>
+
+        <!-- Style Selector Section -->
+        <div class="space-y-2">
+          <h2 class="text-black dark:text-white tracking-light text-2xl font-bold leading-tight text-left">2. Choose Your Style</h2>
+          <div class="grid grid-cols-2 gap-3 mb-4" id="style-grid">
+            <button class="style-chip active">Anime</button>
+            <button class="style-chip">Pastel</button>
+            <button class="style-chip">Cyberpunk</button>
+            <button class="style-chip">Mascot</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- CTA Button -->
+      <div class="sticky bottom-0 bg-background-light dark:bg-background-dark p-4 pt-2 w-full">
+        <button
+          id="generate-btn"
+          class="flex w-full min-w-[84px] cursor-pointer items-center justify-center overflow-hidden rounded-full h-14 px-4 bg-primary text-white text-base font-bold leading-normal tracking-[0.015em]"
+        >
+          <span class="truncate">Generate Avatar</span>
+        </button>
+        <p id="cta-status" class="text-center text-sm text-black/60 dark:text-white/60 pt-2">Waiting for upload…</p>
+      </div>
+    </div>
+
+    <script>
+      const styleButtons = Array.from(document.querySelectorAll(".style-chip"));
+      const photoInput = document.getElementById("photo-input");
+      const photoLabel = document.getElementById("photo-label");
+      const generateBtn = document.getElementById("generate-btn");
+      const ctaStatus = document.getElementById("cta-status");
+      const previewSlot = document.getElementById("preview-slot");
+
+      styleButtons.forEach((btn) => {
+        btn.classList.add(
+          "flex",
+          "items-center",
+          "justify-center",
+          "text-center",
+          "p-3",
+          "h-14",
+          "rounded-full",
+          "text-sm",
+          "font-bold",
+          "leading-normal",
+          "tracking-[0.015em]",
+          "border",
+          "border-white/10",
+          "bg-white/5",
+          "text-black",
+          "dark:text-white"
+        );
+
+        btn.addEventListener("click", () => {
+          styleButtons.forEach((other) => other.classList.remove("active", "bg-primary", "text-white"));
+          styleButtons.forEach((other) => other.classList.add("bg-white/5", "text-black", "dark:text-white"));
+          btn.classList.add("active", "bg-primary", "text-white");
+          btn.classList.remove("bg-white/5", "text-black", "dark:text-white");
+          ctaStatus.textContent = `Style selected: ${btn.textContent.trim()}`;
+        });
+      });
+
+      photoInput.addEventListener("change", (event) => {
+        const file = event.target.files?.[0];
+        if (file) {
+          photoLabel.textContent = file.name;
+          const reader = new FileReader();
+          reader.onload = () => {
+            previewSlot.innerHTML = `<img src="${reader.result}" alt="Uploaded preview" class="rounded-xl max-h-72 object-cover" />`;
+          };
+          reader.readAsDataURL(file);
+          ctaStatus.textContent = "Ready to generate";
+        }
+      });
+
+      generateBtn.addEventListener("click", () => {
+        if (!photoInput.files?.length) {
+          ctaStatus.textContent = "Please upload a photo first";
+          return;
+        }
+        generateBtn.disabled = true;
+        generateBtn.classList.add("opacity-80");
+        ctaStatus.textContent = "Generating avatar…";
+        setTimeout(() => {
+          ctaStatus.textContent = "Avatar generated and saved!";
+          generateBtn.disabled = false;
+          generateBtn.classList.remove("opacity-80");
+        }, 1200);
+      });
+    </script>
+  </body>
+</html>
