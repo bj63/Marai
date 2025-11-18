@@ -1,13 +1,70 @@
 const panels = document.querySelectorAll('.panel');
 const navButtons = document.querySelectorAll('.nav-btn');
+const featureFlags = {
+  brandHub: true,
+  adminPanel: true,
+};
+
+const currentUser = {
+  name: 'Lyra Ops',
+  roles: ['admin'],
+};
+
+const helperFlagStatus = document.getElementById('flag-status');
+const helperFlagBrand = document.getElementById('flag-brand-hub');
+const helperFlagAdmin = document.getElementById('flag-admin-panel');
+
+applyFeatureFlags();
+
 navButtons.forEach((btn) =>
   btn.addEventListener('click', () => {
+    const target = btn.dataset.target;
+    if (!isSectionEnabled(target)) {
+      helperFlagStatus.textContent = `${target} disabled by feature flag`;
+      logAnalytics('screen_blocked', { screen: target, reason: 'feature_flag' });
+      return;
+    }
+    if (target === 'admin' && !hasAdminRole()) {
+      document.getElementById('admin-status').textContent = 'Access denied: admin role required';
+      logAnalytics('screen_blocked', { screen: 'admin', reason: 'role_guard' });
+      return;
+    }
     panels.forEach((p) => p.classList.remove('active'));
     navButtons.forEach((b) => b.classList.remove('active'));
-    document.getElementById(btn.dataset.target).classList.add('active');
+    document.getElementById(target).classList.add('active');
     btn.classList.add('active');
+    logAnalytics('screen_view', { screen: target });
+    if (target === 'admin') {
+      hydrateAdmin();
+    }
   })
 );
+
+logAnalytics('screen_view', { screen: 'onboarding' });
+
+function applyFeatureFlags() {
+  document.getElementById('nav-brand-hub').style.display = featureFlags.brandHub ? '' : 'none';
+  document.getElementById('brand-hub').style.display = featureFlags.brandHub ? '' : 'none';
+  document.getElementById('nav-admin').style.display = featureFlags.adminPanel ? '' : 'none';
+  document.getElementById('admin').style.display = featureFlags.adminPanel ? '' : 'none';
+  helperFlagBrand.textContent = `Brand Hub: ${featureFlags.brandHub ? 'on' : 'off'}`;
+  helperFlagAdmin.textContent = `Admin: ${featureFlags.adminPanel ? 'on' : 'off'}`;
+  helperFlagStatus.textContent = 'Feature-gated navigation';
+}
+
+function isSectionEnabled(target) {
+  if (target === 'brand-hub') return featureFlags.brandHub;
+  if (target === 'admin') return featureFlags.adminPanel;
+  return true;
+}
+
+function hasAdminRole() {
+  return currentUser.roles.includes('admin');
+}
+
+function logAnalytics(event, metadata = {}) {
+  console.log('[analytics]', event, metadata);
+}
 
 // Onboarding
 const authForm = document.getElementById('auth-form');
@@ -94,10 +151,10 @@ function collectPersona() {
   };
 }
 
-function simulateApi(endpoint, payload = {}) {
+function simulateApi(endpoint, payload = {}, response = {}) {
   return new Promise((resolve) => {
     console.log('Mock API', endpoint, payload);
-    setTimeout(resolve, 600);
+    setTimeout(() => resolve(response), 600);
   });
 }
 
@@ -807,34 +864,162 @@ renderPresets();
 
 // Admin
 const adminMetrics = document.getElementById('admin-metrics');
-const birthForm = document.getElementById('birth-form');
+const adminOverviewStatus = document.getElementById('admin-overview-status');
 const adminStatus = document.getElementById('admin-status');
+const clusterStatus = document.getElementById('cluster-status');
+const personaClusters = document.getElementById('persona-clusters');
+const adminSearchForm = document.getElementById('admin-search-form');
+const adminSearchStatus = document.getElementById('admin-search-status');
+const adminSearchResults = document.getElementById('admin-search-results');
+const birthForm = document.getElementById('birth-form');
+const auctionForm = document.getElementById('auction-form');
+const tokenForm = document.getElementById('token-form');
+const auctionStatus = document.getElementById('auction-status');
+const tokenStatus = document.getElementById('token-status');
+let adminHydrated = false;
 
-aSyncMetrics();
+function hydrateAdmin() {
+  if (adminHydrated) return;
+  fetchAdminOverview();
+  fetchPersonaClusters();
+  adminHydrated = true;
+}
 
-function aSyncMetrics() {
-  const metrics = [
-    ['Active MarAI', '1.2k'],
-    ['Dreams today', '3.4k'],
-    ['Avg bond strength', '78%'],
-  ];
-  adminMetrics.innerHTML = '';
-  metrics.forEach(([label, value]) => {
-    const row = document.createElement('li');
-    row.className = 'stat-item';
-    row.innerHTML = `<span>${label}</span><strong>${value}</strong>`;
-    adminMetrics.appendChild(row);
+function fetchAdminOverview() {
+  adminOverviewStatus.textContent = 'GET /api/admin/overview…';
+  const mockResponse = {
+    metrics: [
+      ['Active MarAI', '1.2k'],
+      ['Dreams today', '3.4k'],
+      ['Avg bond strength', '78%'],
+    ],
+    alerts: ['No anomalies detected'],
+  };
+  simulateApi('/api/admin/overview', {}, mockResponse).then((data) => {
+    adminMetrics.innerHTML = '';
+    data.metrics.forEach(([label, value]) => {
+      const row = document.createElement('li');
+      row.className = 'stat-item';
+      row.innerHTML = `<span>${label}</span><strong>${value}</strong>`;
+      adminMetrics.appendChild(row);
+    });
+    data.alerts.forEach((alert) => {
+      const row = document.createElement('li');
+      row.className = 'stat-item';
+      row.innerHTML = `<span>Alert</span><strong>${alert}</strong>`;
+      adminMetrics.appendChild(row);
+    });
+    adminOverviewStatus.textContent = 'Overview synced';
+    logAnalytics('admin_fetch', { endpoint: '/api/admin/overview' });
   });
 }
 
+function fetchPersonaClusters() {
+  clusterStatus.textContent = 'GET /api/admin/persona-clusters…';
+  const mockClusters = {
+    clusters: [
+      { name: 'Dream Weavers', size: 420, cohesion: '0.82' },
+      { name: 'Brand Guardians', size: 88, cohesion: '0.71' },
+      { name: 'Explorers', size: 190, cohesion: '0.63' },
+    ],
+  };
+  simulateApi('/api/admin/persona-clusters', {}, mockClusters).then((data) => {
+    personaClusters.innerHTML = '';
+    data.clusters.forEach((cluster) => {
+      const row = document.createElement('li');
+      row.className = 'stat-item';
+      row.innerHTML = `<span>${cluster.name}</span><strong>${cluster.size} · cohesion ${cluster.cohesion}</strong>`;
+      personaClusters.appendChild(row);
+    });
+    clusterStatus.textContent = 'Clusters refreshed';
+    logAnalytics('admin_fetch', { endpoint: '/api/admin/persona-clusters' });
+  });
+}
+
+adminSearchForm.addEventListener('submit', (e) => {
+  e.preventDefault();
+  if (!hasAdminRole()) {
+    adminSearchStatus.textContent = 'Search blocked: admin role required';
+    return;
+  }
+  const query = document.getElementById('admin-search').value.trim();
+  if (!query) {
+    adminSearchStatus.textContent = 'Enter a query to search';
+    return;
+  }
+  adminSearchStatus.textContent = 'GET /api/admin/search…';
+  const mockResults = {
+    results: [
+      { name: 'RenAI', type: 'persona', cluster: 'Dream Weavers' },
+      { name: 'KoiAI', type: 'persona', cluster: 'Explorers' },
+      { name: 'Brand Nova', type: 'brand', cluster: 'Brand Guardians' },
+    ].filter((item) => item.name.toLowerCase().includes(query.toLowerCase())),
+  };
+  simulateApi('/api/admin/search', { query }, mockResults).then((data) => {
+    adminSearchResults.innerHTML = '';
+    if (!data.results.length) {
+      adminSearchResults.innerHTML = '<li class="stat-item">No results</li>';
+    } else {
+      data.results.forEach((item) => {
+        const row = document.createElement('li');
+        row.className = 'stat-item';
+        row.innerHTML = `<span>${item.type}</span><strong>${item.name} · ${item.cluster}</strong>`;
+        adminSearchResults.appendChild(row);
+      });
+    }
+    adminSearchStatus.textContent = 'Search complete';
+    logAnalytics('admin_fetch', { endpoint: '/api/admin/search', query });
+  });
+});
+
 birthForm.addEventListener('submit', (e) => {
   e.preventDefault();
-  adminStatus.textContent = 'Saving with audit…';
-  simulateApi('/api/admin/birth-rate', { target: Number(document.getElementById('birth-rate').value) }).then(() => {
-    adminStatus.textContent = 'Stored with audit trail';
-  });
+  confirmAndSend(
+    '/api/admin/birth-rate',
+    { target: Number(document.getElementById('birth-rate').value) },
+    adminStatus,
+    'Apply new birth rate with audit logging?'
+  );
+});
+
+auctionForm.addEventListener('submit', (e) => {
+  e.preventDefault();
+  confirmAndSend(
+    '/api/admin/auction-actions',
+    { action: document.getElementById('auction-action').value },
+    auctionStatus,
+    'Confirm sending auction directive?'
+  );
+});
+
+tokenForm.addEventListener('submit', (e) => {
+  e.preventDefault();
+  confirmAndSend(
+    '/api/admin/token-actions',
+    { action: document.getElementById('token-action').value },
+    tokenStatus,
+    'Confirm token control action?'
+  );
 });
 
 document.getElementById('audit-log').addEventListener('click', () => {
   adminStatus.textContent = 'Audit log downloaded';
+  logAnalytics('admin_fetch', { endpoint: '/api/admin/audit-log' });
 });
+
+function confirmAndSend(endpoint, payload, statusEl, confirmation) {
+  if (!hasAdminRole()) {
+    statusEl.textContent = 'Blocked: admin role required';
+    return;
+  }
+  const confirmed = window.confirm(confirmation);
+  if (!confirmed) {
+    statusEl.textContent = 'Cancelled';
+    return;
+  }
+  statusEl.textContent = `POST ${endpoint}…`;
+  simulateApi(endpoint, payload).then(() => {
+    statusEl.textContent = 'Stored with audit trail';
+    logAnalytics('admin_write', { endpoint });
+  });
+}
