@@ -1,3 +1,5 @@
+"use client";
+
 import React from "react";
 import { RouteGuard } from "../../../../components/RouteGuard";
 import { useSession } from "../../../../providers/SessionProvider";

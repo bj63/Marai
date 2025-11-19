@@ -1,3 +1,5 @@
+"use client";
+
 import React from "react";
 import { useTheme, ThemeVariant } from "../providers/ThemeProvider";
 import { useSession } from "../providers/SessionProvider";
