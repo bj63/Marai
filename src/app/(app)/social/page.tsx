@@ -1,7 +1,8 @@
 "use client";
 
-import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import Image from "next/image";
+"use client";
+
+import React, { useEffect, useMemo, useState } from "react";
 import { RouteGuard } from "../../../components/RouteGuard";
 import { useToasts } from "../../../components/ToastHub";
 import { useSession } from "../../../providers/SessionProvider";
