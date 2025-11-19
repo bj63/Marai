@@ -290,7 +290,7 @@ export default function SocialGraphPage() {
       return;
     }
     submitAvatarJob();
-  }, [pollAvatarJob, submitAvatarJob]);
+  }, [addToast, pollAvatarJob, submitAvatarJob]);
 
   const toggleFollow = async (nodeId: string) => {
     const node = graph.nodes.find((n) => n.id === nodeId);
