@@ -1,5 +1,7 @@
 "use client";
 
+"use client";
+
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { RouteGuard } from "../../../../components/RouteGuard";
 import { useToasts } from "../../../../components/ToastHub";

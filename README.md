@@ -1,36 +1,26 @@
-# MarAI Experience Prototype
+# MarAI Experience App
 
-This repository contains a static, dependency-free prototype for the MarAI experience across onboarding, feed, profile, chat, social graph, explore, dream archive, and admin control surfaces.
+This repository now ships a runnable Next.js application for the MarAI experience (onboarding, feed, profile, chat, social graph, explore, dream archive, and admin control surfaces). The legacy static prototype in `frontend/` is still available for reference, but the default entry point is the typed app under `src/`.
 
 ## Running locally
 
-- Copy `.env.example` to `.env` and set `NEXT_PUBLIC_API_BASE_URL` / `NEXT_PUBLIC_API_KEY` for real API calls.
-- Serve the static prototype from `frontend/` (no build step required). Examples:
-  - `python -m http.server 4173 --directory frontend`
-  - `npx serve frontend`
-- To override the API base URL or feature flags at runtime, provide a `<script id="marai-config" type="application/json">` block before `shared.js` with keys such as `apiBaseUrl`, `featureFlags.brandHub`, `featureFlags.adminPanel`, `roles`, `corsAllowedOrigins`, and `maxUploadBytes`.
+1. Copy `.env.example` to `.env` and set `NEXT_PUBLIC_API_BASE_URL` / `NEXT_PUBLIC_API_KEY` for real API calls.
+2. Install dependencies: `npm install`.
+3. Start the app: `npm run dev` (defaults to port 3000).
 
-Key entry points:
-- `frontend/landing.html` – branded splash hero with Tailwind CSS and CTA links.
-- `frontend/index.html` – layout and feature sections for each major surface.
-- `frontend/avatar-creator.html` – standalone avatar upload + style selection experience.
-- `frontend/persona-confirmation.html` – persona naming and trait tuning step for MarAI.
-- `frontend/feed.html` – dedicated feed surface with cards, dialogues, and skeleton loading.
-- `frontend/renai-card.html` – RenAI profile view highlighting evolution, charts, and badges.
-- `frontend/chat.html` – chat canvas with quick actions, streaming indicator, and input controls.
-- `frontend/index.html` – Social graph section now includes Follow/Friend layers, Inner Circle, AI-aware relational memory, Friend AI chat guardrails, and TikTok-style discovery.
+## Building for production
 
-See `docs/ops.md` for environment variables, runtime config examples, and a smoke-test checklist.
+- Run `npm run build` followed by `npm start` to serve the optimized build.
+- The included `Dockerfile` builds a standalone production image suitable for Railway or similar hosts.
 
 ## Structure
-- `frontend/landing.html` – branded splash hero with Tailwind CSS and CTA links.
-- `frontend/index.html` – layout and feature sections for each major surface.
-- `frontend/avatar-creator.html` – standalone avatar upload + style selection experience.
-- `frontend/persona-confirmation.html` – persona naming and trait tuning step for MarAI.
-- `frontend/feed.html` – dedicated feed surface with cards, dialogues, and skeleton loading.
-- `frontend/renai-card.html` – RenAI profile view highlighting evolution, charts, and badges.
-- `frontend/chat.html` – chat canvas with quick actions, streaming indicator, and input controls.
-- `frontend/index.html` – Social graph section now includes Follow/Friend layers, Inner Circle, AI-aware relational memory, Friend AI chat guardrails, and TikTok-style discovery.
-- `frontend/styles.css` – design tokens, gradients, and component styling.
-- `frontend/main.js` – lightweight interaction logic, optimistic UI, and API call simulations.
-- `docs/implementation-plan.md` – prior implementation plan used to guide this prototype.
+
+- `src/app` – app router entry points for landing, login, feed, profile, chat, and social graph routes.
+- `src/components` – shared UI (top bar, nav rail, toasts, feed helpers, route guards, etc.).
+- `src/lib` – API client and session bootstrap utilities.
+- `src/providers` – theming, toast, and session context providers.
+- `src/styles` – global styles and design tokens.
+- `frontend/` – the legacy static HTML prototype (kept for reference only).
+- `docs/implementation-plan.md` / `docs/ops.md` – prior plans and ops notes.
+
+See `docs/ops.md` for environment variables, runtime config examples, and a smoke-test checklist.
