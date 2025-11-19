@@ -1,3 +1,5 @@
+"use client";
+
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 export type VirtualFeedItem = { id: string };
@@ -90,6 +92,7 @@ export function VirtualFeedList<TItem extends VirtualFeedItem>({
   const endRequestInFlight = useRef(false);
 
   const measurements = useMemo(() => {
+    const version = heightVersion;
     let offset = 0;
     const entries: Measurement[] = items.map((item) => {
       const height = heightsRef.current.get(item.id) ?? estimatedItemHeight;
@@ -98,7 +101,7 @@ export function VirtualFeedList<TItem extends VirtualFeedItem>({
       return measurement;
     });
 
-    return { entries, totalHeight: offset };
+    return { entries, totalHeight: offset + version * 0 };
   }, [items, estimatedItemHeight, heightVersion]);
 
   const { start, end } = useMemo(() => {
