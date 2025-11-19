@@ -3,6 +3,7 @@
 "use client";
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import Image from "next/image";
 import { RouteGuard } from "../../../../components/RouteGuard";
 import { useToasts } from "../../../../components/ToastHub";
 import { useSession } from "../../../../providers/SessionProvider";
@@ -219,7 +220,7 @@ export default function ChatPage({ params }: { params: { maraiId: string } }) {
         streamingRef.current = null;
       };
     },
-    [finalizeAssistant, params.maraiId, upsertAssistantMessage],
+    [addToast, finalizeAssistant, params.maraiId, upsertAssistantMessage],
   );
 
   const sendMessage = useCallback(async () => {
@@ -276,7 +277,7 @@ export default function ChatPage({ params }: { params: { maraiId: string } }) {
     setStreamError(null);
     startStream(assistantId);
     addToast({ title: "Retrying chat stream", tone: "info" });
-  }, [messages, startStream]);
+  }, [addToast, messages, startStream]);
 
   const requestMoodDigest = async () => {
     try {
@@ -401,7 +402,16 @@ export default function ChatPage({ params }: { params: { maraiId: string } }) {
                       Job {sceneJob.id || "pending"}: <strong>{sceneJob.status}</strong>
                     </p>
                     {sceneJob.error && <p className="bubble-error">{sceneJob.error}</p>}
-                    {sceneJob.mediaUrl && <img src={sceneJob.mediaUrl} alt="Generated scene" className="scene-preview" />}
+                    {sceneJob.mediaUrl && (
+                      <Image
+                        src={sceneJob.mediaUrl}
+                        alt="Generated scene"
+                        className="scene-preview"
+                        width={640}
+                        height={360}
+                        unoptimized
+                      />
+                    )}
                   </>
                 ) : (
                   <p>No active scene jobs.</p>

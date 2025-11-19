@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useMemo } from "react";
+import Image from "next/image";
 import { useToasts } from "../ToastHub";
 
 export type FeedAction = "react" | "comment" | "regenerate" | "dream";
@@ -49,13 +50,14 @@ const MediaGallery = React.memo(function MediaGallery({ media }: { media?: Media
           );
         }
         return (
-          <img
+          <Image
             key={asset.url}
             className="media-grid__item"
             src={asset.url}
             alt={asset.alt || "Post media"}
-            loading="lazy"
-            decoding="async"
+            width={800}
+            height={800}
+            unoptimized
           />
         );
       })}
@@ -166,7 +168,14 @@ export function AvatarUpdateCard({ post, onAction }: CardProps) {
       <div className="avatar-update">
         <div className="avatar-preview" aria-label="Updated avatar thumbnail">
           {post.avatarPreview ? (
-            <img src={post.avatarPreview} alt="Avatar preview" loading="lazy" decoding="async" />
+            <Image
+              src={post.avatarPreview}
+              alt="Avatar preview"
+              width={96}
+              height={96}
+              className="avatar-preview-img"
+              unoptimized
+            />
           ) : (
             <div className="avatar-placeholder" aria-hidden />
           )}

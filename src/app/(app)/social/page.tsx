@@ -155,7 +155,11 @@ export default function SocialGraphPage() {
   const avatarJobRef = useRef<string | null>(null);
   const avatarPollRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const viewerLabel = profile?.displayName ?? "You";
-  const edges = graph.edges ?? [];
+  const edges = useMemo(() => graph.edges ?? [], [graph.edges]);
+  const recommendations = useMemo(
+    () => graph.recommendations ?? FALLBACK_GRAPH.recommendations ?? [],
+    [graph.recommendations],
+  );
 
   useEffect(() => {
     let cancelled = false;
@@ -210,7 +214,6 @@ export default function SocialGraphPage() {
   }, [positionedNodes]);
 
   const selectedNode = selectedId ? nodeLookup.get(selectedId) : undefined;
-  const recommendations = graph.recommendations ?? FALLBACK_GRAPH.recommendations ?? [];
   const activeRecommendation = useMemo(() => {
     if (!recommendations.length) return undefined;
     const index = carouselIndex % recommendations.length;
@@ -431,7 +434,16 @@ export default function SocialGraphPage() {
               </button>
             </div>
             <p className="muted">{avatarStatus}</p>
-            {avatarPreview && <img src={avatarPreview} alt="Generated avatar" className="avatar-preview" />}
+            {avatarPreview && (
+              <Image
+                src={avatarPreview}
+                alt="Generated avatar"
+                className="avatar-preview"
+                width={320}
+                height={320}
+                unoptimized
+              />
+            )}
           </div>
 
           <div className="panel-card">
@@ -505,7 +517,13 @@ export default function SocialGraphPage() {
             {selectedNode ? (
               <div className="node-detail">
                 <div className="node-header">
-                  <div className="node-avatar" aria-hidden>{selectedNode.avatar ? <img src={selectedNode.avatar} alt="" /> : selectedNode.name[0]}</div>
+                  <div className="node-avatar" aria-hidden>
+                    {selectedNode.avatar ? (
+                      <Image src={selectedNode.avatar} alt="" width={48} height={48} className="avatar-image" unoptimized />
+                    ) : (
+                      selectedNode.name[0]
+                    )}
+                  </div>
                   <div>
                     <h3>{selectedNode.name}</h3>
                     <p className="muted">{selectedNode.handle}</p>
