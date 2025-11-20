@@ -14,7 +14,7 @@ export type MediaAsset = {
 
 export type FeedPost = {
   id: string;
-  type: "autopost" | "dream" | "dialogue" | "ad" | "avatar_update";
+  type: "autopost" | "dream" | "dialogue" | "ad" | "avatar_update" | "product_drop";
   author: string;
   persona?: string;
   createdAt?: string;
@@ -30,6 +30,13 @@ export type FeedPost = {
   ad?: { brand: string; ctaLabel?: string; ctaUrl?: string; body?: string };
   mood?: string;
   avatarPreview?: string;
+  product?: {
+    title: string;
+    price: string;
+    buyUrl: string;
+    features?: string;
+    sellerType?: "common" | "brand";
+  };
 };
 
 type CardProps = { post: FeedPost; onAction: (postId: string, action: FeedAction) => void };
@@ -185,6 +192,43 @@ export function AvatarUpdateCard({ post, onAction }: CardProps) {
           {post.mood && <p className="eyebrow">Style: {post.mood}</p>}
         </div>
       </div>
+      <ActionsRow post={post} onAction={onAction} />
+    </PostShell>
+  );
+}
+
+export function CommerceCard({ post, onAction }: CardProps) {
+  return (
+    <PostShell post={post}>
+      <div className="relative mb-4 overflow-hidden rounded-2xl bg-slate-900/30 shadow-inner">
+        <MediaGallery media={post.media} />
+        {post.product?.price && (
+          <div className="absolute right-3 top-3 rounded-full bg-black/70 px-3 py-1 text-sm font-semibold text-white backdrop-blur">
+            {post.product.price}
+          </div>
+        )}
+      </div>
+
+      {post.text && <p className="lede mb-3">{post.text}</p>}
+
+      {post.product?.features && (
+        <div className="mb-4 rounded-xl bg-emerald-500/10 p-3 text-sm italic text-emerald-100/90">
+          <p className="font-semibold not-italic text-emerald-200">AI Analysis</p>
+          <p>{post.product.features}</p>
+        </div>
+      )}
+
+      {post.product?.buyUrl && (
+        <a
+          className="button mb-4 inline-flex w-full items-center justify-center rounded-xl bg-gradient-to-r from-emerald-500 to-teal-600 px-4 py-3 text-base font-bold text-white shadow-lg shadow-emerald-900/40 transition hover:from-emerald-400 hover:to-teal-500"
+          href={post.product.buyUrl}
+          target="_blank"
+          rel="noreferrer"
+        >
+          Buy Now
+        </a>
+      )}
+
       <ActionsRow post={post} onAction={onAction} />
     </PostShell>
   );

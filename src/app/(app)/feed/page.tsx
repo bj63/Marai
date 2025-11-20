@@ -9,6 +9,7 @@ import {
   AdCard,
   AutopostCard,
   AvatarUpdateCard,
+  CommerceCard,
   DialogueCard,
   DreamCard,
   FeedAction,
@@ -194,6 +195,8 @@ export default function FeedPage() {
           return <AdCard post={post} onAction={handleAction} />;
         case "avatar_update":
           return <AvatarUpdateCard post={post} onAction={handleAction} />;
+        case "product_drop":
+          return <CommerceCard post={post} onAction={handleAction} />;
         default:
           return <AutopostCard post={post} onAction={handleAction} />;
       }
