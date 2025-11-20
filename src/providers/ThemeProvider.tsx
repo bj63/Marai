@@ -37,17 +37,19 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
 
     const updateFromState = async () => {
       try {
-        const data = await apiClient<any>("/api/marai/state/current", { mockFallback: false });
+        const response = await fetch("/api/marai/state/current");
+        if (!response.ok) return;
+
+        const data = await response.json();
         const computed = getComputedStyle(root);
 
         const accent =
           data?.display_color ??
-          computed.getPropertyValue("--accent")?.trim() ??
-          computed.getPropertyValue("--color-accent")?.trim();
+          computed.getPropertyValue("--color-accent")?.trim() ??
+          computed.getPropertyValue("--accent")?.trim();
         const motion = data?.motion_speed ?? computed.getPropertyValue("--motion-speed")?.trim() || "1";
 
         if (accent) {
-          root.style.setProperty("--accent", accent);
           root.style.setProperty("--color-accent", accent);
         }
 
