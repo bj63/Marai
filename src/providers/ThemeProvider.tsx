@@ -1,7 +1,7 @@
 "use client";
 
 import React, { createContext, useContext, useEffect, useMemo, useState } from "react";
-import { apiClient } from "@/lib/apiClient";
+import { apiClient } from "../lib/apiClient";
 
 export type ThemeVariant = "dark" | "pastel" | "cyberpunk";
 
@@ -37,17 +37,16 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
 
     const updateFromState = async () => {
       try {
-        const response = await fetch("/api/marai/state/current");
-        if (!response.ok) return;
-
-        const data = await response.json();
+        const data = await apiClient<any>("/api/marai/state/current", {
+          retry: { attempts: 0 },
+        });
         const computed = getComputedStyle(root);
 
         const accent =
           data?.display_color ??
           computed.getPropertyValue("--color-accent")?.trim() ??
           computed.getPropertyValue("--accent")?.trim();
-        const motion = data?.motion_speed ?? computed.getPropertyValue("--motion-speed")?.trim() || "1";
+        const motion = (data?.motion_speed ?? computed.getPropertyValue("--motion-speed")?.trim()) || "1";
 
         if (accent) {
           root.style.setProperty("--color-accent", accent);

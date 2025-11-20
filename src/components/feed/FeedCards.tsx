@@ -3,7 +3,7 @@
 import React, { useMemo } from "react";
 import Image from "next/image";
 import { useToasts } from "../ToastHub";
-import { apiClient } from "@/lib/apiClient";
+import { apiClient } from "../../lib/apiClient";
 
 export type FeedAction = "react" | "comment" | "regenerate" | "dream";
 
@@ -229,14 +229,19 @@ export function CommerceCard({ post, onAction }: CardProps) {
       )}
 
       {post.product?.buyUrl && (
-        <a
-          className="button mb-4 inline-flex w-full items-center justify-center rounded-xl bg-gradient-to-r from-emerald-500 to-teal-600 px-4 py-3 text-base font-bold text-white shadow-lg shadow-emerald-900/40 transition hover:from-emerald-400 hover:to-teal-500"
-          href={post.product.buyUrl}
-          target="_blank"
-          rel="noreferrer"
+        <button
+          className="button mb-4 inline-flex w-full items-center justify-center rounded-xl bg-gradient-to-r from-emerald-500 to-teal-600 px-4 py-3 text-base font-bold text-white shadow-lg shadow-emerald-900/40 transition hover:from-emerald-400 hover:to-teal-500 cursor-pointer"
+          onClick={() => {
+            apiClient("/api/commerce/track-click", {
+              method: "POST",
+              body: { postId: post.id, sellerType: post.product?.sellerType },
+            }).catch(() => {});
+
+            window.open(post.product?.buyUrl, "_blank");
+          }}
         >
-          Buy Now
-        </a>
+          Buy Now • {post.product?.price}
+        </button>
       )}
 
       <ActionsRow post={post} onAction={onAction} />
