@@ -1,7 +1,7 @@
 "use client";
 
 import React, { createContext, useContext, useEffect, useMemo, useState } from "react";
-import { apiClient } from "@/lib/apiClient";
+import { apiClient } from "../lib/apiClient";
 
 export type ThemeVariant = "dark" | "pastel" | "cyberpunk";
 
@@ -46,7 +46,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
           data?.display_color ??
           computed.getPropertyValue("--color-accent")?.trim() ??
           computed.getPropertyValue("--accent")?.trim();
-        const motion = data?.motion_speed ?? computed.getPropertyValue("--motion-speed")?.trim() || "1";
+        const motion = (data?.motion_speed ?? computed.getPropertyValue("--motion-speed")?.trim()) || "1";
 
         if (accent) {
           root.style.setProperty("--color-accent", accent);

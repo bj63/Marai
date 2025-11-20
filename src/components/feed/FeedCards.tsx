@@ -3,7 +3,7 @@
 import React, { useMemo } from "react";
 import Image from "next/image";
 import { useToasts } from "../ToastHub";
-import { apiClient } from "@/lib/apiClient";
+import { apiClient } from "../../lib/apiClient";
 
 export type FeedAction = "react" | "comment" | "regenerate" | "dream";
 
