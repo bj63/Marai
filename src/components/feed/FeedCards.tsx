@@ -3,6 +3,7 @@
 import React, { useMemo } from "react";
 import Image from "next/image";
 import { useToasts } from "../ToastHub";
+import { apiClient } from "@/lib/apiClient";
 
 export type FeedAction = "react" | "comment" | "regenerate" | "dream";
 
@@ -50,7 +51,16 @@ const MediaGallery = React.memo(function MediaGallery({ media }: { media?: Media
       {items.map((asset) => {
         if (asset.kind === "video") {
           return (
-            <video key={asset.url} className="media-grid__item" controls preload="metadata" playsInline muted>
+            <video
+              key={asset.url}
+              className="media-grid__item"
+              preload="metadata"
+              playsInline
+              autoPlay
+              loop
+              muted
+              style={{ objectFit: "cover", width: "100%", height: "450px" }}
+            >
               <source src={asset.url} />
               Your browser does not support the video tag.
             </video>

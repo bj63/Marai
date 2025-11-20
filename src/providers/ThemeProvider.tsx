@@ -29,6 +29,45 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     localStorage.setItem(THEME_KEY, theme);
   }, [theme]);
 
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    const root = document.documentElement;
+
+    const updateFromState = async () => {
+      try {
+        const response = await fetch("/api/marai/state/current");
+        if (!response.ok) return;
+
+        const data = await response.json();
+        const computed = getComputedStyle(root);
+
+        const accent =
+          data?.display_color ??
+          computed.getPropertyValue("--color-accent")?.trim() ??
+          computed.getPropertyValue("--accent")?.trim();
+        const motion = data?.motion_speed ?? computed.getPropertyValue("--motion-speed")?.trim() || "1";
+
+        if (accent) {
+          root.style.setProperty("--color-accent", accent);
+        }
+
+        if (motion) {
+          root.style.setProperty("--motion-speed", motion);
+        }
+      } catch (error) {
+        // fail silently; polling will retry
+      }
+    };
+
+    const interval = window.setInterval(updateFromState, 5000);
+    updateFromState();
+
+    return () => {
+      window.clearInterval(interval);
+    };
+  }, []);
+
   const value = useMemo(
     () => ({
       theme,
