@@ -1,6 +1,7 @@
 "use client";
 
 import React, { createContext, useContext, useEffect, useMemo, useState } from "react";
+import { apiClient } from "@/lib/apiClient";
 
 export type ThemeVariant = "dark" | "pastel" | "cyberpunk";
 
