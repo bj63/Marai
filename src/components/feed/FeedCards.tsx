@@ -54,11 +54,12 @@ const MediaGallery = React.memo(function MediaGallery({ media }: { media?: Media
             <video
               key={asset.url}
               className="media-grid__item"
+              preload="metadata"
+              playsInline
               autoPlay
               loop
               muted
-              playsInline
-              style={{ objectFit: "cover", width: "100%", height: "420px" }}
+              style={{ objectFit: "cover", width: "100%", height: "450px" }}
             >
               <source src={asset.url} />
               Your browser does not support the video tag.
@@ -207,8 +208,6 @@ export function AvatarUpdateCard({ post, onAction }: CardProps) {
 }
 
 export function CommerceCard({ post, onAction }: CardProps) {
-  const { addToast } = useToasts();
-
   return (
     <PostShell post={post}>
       <div className="relative mb-4 overflow-hidden rounded-2xl bg-slate-900/30 shadow-inner">
@@ -230,21 +229,14 @@ export function CommerceCard({ post, onAction }: CardProps) {
       )}
 
       {post.product?.buyUrl && (
-        <button
-          type="button"
+        <a
           className="button mb-4 inline-flex w-full items-center justify-center rounded-xl bg-gradient-to-r from-emerald-500 to-teal-600 px-4 py-3 text-base font-bold text-white shadow-lg shadow-emerald-900/40 transition hover:from-emerald-400 hover:to-teal-500"
-          onClick={() => {
-            if (!post.product?.buyUrl) return;
-            void apiClient("/api/commerce/track-click", {
-              method: "POST",
-              body: { postId: post.id, sellerType: post.product?.sellerType },
-            });
-            window.open(post.product.buyUrl, "_blank");
-            addToast({ title: "Opening Shop...", tone: "success" });
-          }}
+          href={post.product.buyUrl}
+          target="_blank"
+          rel="noreferrer"
         >
-          Buy Now{post.product?.price ? ` • ${post.product.price}` : ""}
-        </button>
+          Buy Now
+        </a>
       )}
 
       <ActionsRow post={post} onAction={onAction} />

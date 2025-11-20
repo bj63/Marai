@@ -37,7 +37,10 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
 
     const updateFromState = async () => {
       try {
-        const data = await apiClient<any>("/api/marai/state/current", { mockFallback: false });
+        const response = await fetch("/api/marai/state/current");
+        if (!response.ok) return;
+
+        const data = await response.json();
         const computed = getComputedStyle(root);
 
         const accent =
