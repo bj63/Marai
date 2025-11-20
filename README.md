@@ -1,26 +1,35 @@
-# MarAI Experience App
+# Jarvis for Everyone
 
-This repository now ships a runnable Next.js application for the MarAI experience (onboarding, feed, profile, chat, social graph, explore, dream archive, and admin control surfaces). The legacy static prototype in `frontend/` is still available for reference, but the default entry point is the typed app under `src/`.
+MarAI is the everyday copilot that remembers your context, narrates your vibe, and connects you to people and products that matter. This repo contains the full-stack experience: a Next.js app (App Router) that talks to the "MarAI Brain" backend for mood, feed, commerce, and trust signals.
 
-## Running locally
+## Why it matters
+- **Soul-first UX:** Mood Ring and theme sync pull live state from the backend so the interface always mirrors your current energy.
+- **Trusted economy:** Commerce clicks are tracked before checkout, so sellers build reputation and buyers get safer recommendations.
+- **Real-time personas:** Feed, chat, and dream views render from API-driven personas with optimistic UI and graceful offline handling.
 
-1. Copy `.env.example` to `.env` and set `NEXT_PUBLIC_API_BASE_URL` / `NEXT_PUBLIC_API_KEY` for real API calls.
+## Quick start
+1. Copy `.env.example` to `.env` and set `NEXT_PUBLIC_API_BASE_URL` and `NEXT_PUBLIC_API_KEY` to point at your MarAI Brain.
 2. Install dependencies: `npm install`.
-3. Start the app: `npm run dev` (defaults to port 3000).
+3. Run the experience locally: `npm run dev` (defaults to port 3000).
 
-## Building for production
+## Production deployment
+- Build and serve optimized assets with `npm run build` then `npm start`.
+- The included `Dockerfile` produces a Railway-ready image; `nginx.conf` proxies traffic for SSR and static assets.
+- App-level API calls use the typed `apiClient`, which respects the configured backend host in all environments.
 
-- Run `npm run build` followed by `npm start` to serve the optimized build.
-- The included `Dockerfile` builds a standalone production image suitable for Railway or similar hosts.
+## What lives where
+- `src/app` – App Router routes for landing, onboarding, feed, profile, chat, and admin surfaces.
+- `src/components` – Shared UI primitives (rail, toasts, feed cards, guards, etc.).
+- `src/providers` – Theme, session, and toast context providers that hydrate client state.
+- `src/lib` – API client, session bootstrap, and helpers.
+- `frontend/` – Legacy static prototype, kept for reference.
+- `docs/` – Ops notes and implementation plans.
 
-## Structure
+## Operating the Mood Ring
+The `ThemeProvider` polls `/api/marai/state/current` through `apiClient` to pull accent colors and motion speed directly from the backend. It updates CSS variables every few seconds while falling back gracefully if offline. When paired with the app shell, this keeps the interface and your personal "soul" in lockstep.
 
-- `src/app` – app router entry points for landing, login, feed, profile, chat, and social graph routes.
-- `src/components` – shared UI (top bar, nav rail, toasts, feed helpers, route guards, etc.).
-- `src/lib` – API client and session bootstrap utilities.
-- `src/providers` – theming, toast, and session context providers.
-- `src/styles` – global styles and design tokens.
-- `frontend/` – the legacy static HTML prototype (kept for reference only).
-- `docs/implementation-plan.md` / `docs/ops.md` – prior plans and ops notes.
+## Building the trust graph
+Commerce feed cards trigger a tracking call before opening a seller's checkout page. Each click increments trust for the seller type, enabling safer recommendations and transparent scoring in your social graph.
 
-See `docs/ops.md` for environment variables, runtime config examples, and a smoke-test checklist.
+## License
+MIT. Build boldly.
