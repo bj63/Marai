@@ -208,8 +208,6 @@ export function AvatarUpdateCard({ post, onAction }: CardProps) {
 }
 
 export function CommerceCard({ post, onAction }: CardProps) {
-  const { addToast } = useToasts();
-
   return (
     <PostShell post={post}>
       <div className="relative mb-4 overflow-hidden rounded-2xl bg-slate-900/30 shadow-inner">
@@ -231,21 +229,14 @@ export function CommerceCard({ post, onAction }: CardProps) {
       )}
 
       {post.product?.buyUrl && (
-        <button
-          type="button"
+        <a
           className="button mb-4 inline-flex w-full items-center justify-center rounded-xl bg-gradient-to-r from-emerald-500 to-teal-600 px-4 py-3 text-base font-bold text-white shadow-lg shadow-emerald-900/40 transition hover:from-emerald-400 hover:to-teal-500"
-          onClick={() => {
-            if (!post.product?.buyUrl) return;
-            window.open(post.product.buyUrl, "_blank");
-            void apiClient("/api/commerce/track-click", {
-              method: "POST",
-              body: { postId: post.id },
-            });
-            addToast({ title: "Opening Shop...", tone: "success" });
-          }}
+          href={post.product.buyUrl}
+          target="_blank"
+          rel="noreferrer"
         >
           Buy Now
-        </button>
+        </a>
       )}
 
       <ActionsRow post={post} onAction={onAction} />
