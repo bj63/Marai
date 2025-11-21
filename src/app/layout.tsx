@@ -18,6 +18,7 @@ type RootLayoutProps = {
 const APP_NAV = [
   { href: "/", label: "Landing", section: "public" },
   { href: "/login", label: "Login", section: "auth" },
+  { href: "/signup", label: "Sign up", section: "auth" },
   { href: "/feed", label: "Feed", section: "app" },
   { href: "/profile/demo", label: "Profile", section: "app" },
   { href: "/chat/alpha", label: "Chat", section: "app" },

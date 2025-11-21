@@ -33,6 +33,9 @@ export default function LoginPage() {
       <button className="button" onClick={handleLogin} disabled={status === "loading"}>
         {status === "loading" ? "Connecting..." : "Continue"}
       </button>
+      <p className="muted">
+        New here? <a className="text-link" href="/signup">Create an account</a>
+      </p>
     </section>
   );
 }
