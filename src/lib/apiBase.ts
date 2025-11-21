@@ -1,8 +1,8 @@
 const DEFAULT_REMOTE_API_BASE = "https://moaaiv3-production.up.railway.app";
 
-export function resolveApiBase(defaultBase?: string) {
+export function resolveApiBase(defaultBase = DEFAULT_REMOTE_API_BASE) {
+export function resolveApiBase(defaultBase = "") {
   const runtimeConfig = readRuntimeConfig();
-  const fallbackBase = resolveFallbackBase(defaultBase);
 
   const bases = [
     runtimeConfig?.apiBaseUrl,
@@ -12,7 +12,7 @@ export function resolveApiBase(defaultBase?: string) {
     process.env.NEXT_PUBLIC_MOA_API_URL,
     process.env.API_BASE_URL,
     process.env.API_BASE,
-    fallbackBase,
+    defaultBase,
     typeof window !== "undefined" ? window.location?.origin ?? "" : "",
     "",
   ].filter((value): value is string => typeof value === "string");
@@ -25,14 +25,6 @@ export function resolveApiBase(defaultBase?: string) {
   }
 
   return "";
-}
-
-function resolveFallbackBase(defaultBase?: string) {
-  if (defaultBase && defaultBase.trim()) {
-    return defaultBase;
-  }
-
-  return DEFAULT_REMOTE_API_BASE;
 }
 
 function normalizeBase(candidate?: string) {
