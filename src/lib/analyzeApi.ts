@@ -1,3 +1,4 @@
+import { resolveApiBase as resolveApiBaseUrl } from "./apiBase";
 import { resolveApiBase } from "./apiBase";
 
 export type AnalyzeRequest = {
@@ -98,6 +99,7 @@ export async function analyzeMessage(
   payload: AnalyzeRequest,
   options: AnalyzeOptions = {}
 ) {
+  const base = resolveApiBaseUrl();
   const base = resolveApiBase();
   const endpoint = `${base}${ANALYZE_PATH}`;
   const headers: Record<string, string> = {
@@ -122,6 +124,7 @@ export async function analyzeMessage(
 }
 
 export async function requestDevToken(userId: string) {
+  const base = resolveApiBaseUrl();
   const base = resolveApiBase();
   const endpoint = `${base}/api/dev-login`;
 
