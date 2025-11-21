@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import Image from "next/image"; // <--- Added this import
+import Image from "next/image";
 import { RouteGuard } from "../../../components/RouteGuard";
 import { useToasts } from "../../../components/ToastHub";
 import { useSession } from "../../../providers/SessionProvider";
@@ -410,7 +410,7 @@ export default function SocialGraphPage() {
             <h3>POST /api/avatar/generate</h3>
             <p className="muted">Uploads use your API key from .env and stream progress via polling.</p>
             <div className="input-row">
-              <label className="file-input">
+              <label className="file-input" htmlFor="avatar-upload">
                 <input
                   id="avatar-upload"
                   name="avatarUpload"
@@ -421,6 +421,7 @@ export default function SocialGraphPage() {
                 <span>{avatarFile ? avatarFile.name : "Upload reference"}</span>
               </label>
               <select
+                aria-label="Avatar style"
                 id="avatar-style"
                 name="avatarStyle"
                 value={avatarStyle}
