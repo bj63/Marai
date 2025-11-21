@@ -1,3 +1,4 @@
+import { resolveApiBase as resolveApiBaseUrl } from "./apiBase";
 import { resolveApiBase } from "./apiBase";
 
 export type AnalyzeRequest = {
@@ -55,6 +56,23 @@ export type AnalyzeResponse = {
 
 const ANALYZE_PATH = "/api/analyze";
 
+export function resolveApiBase() {
+  const bases = [
+    process.env.NEXT_PUBLIC_API_BASE,
+    process.env.NEXT_PUBLIC_API_URL,
+    process.env.NEXT_PUBLIC_MOA_API_URL,
+    ""
+  ].filter((value): value is string => typeof value === "string");
+
+  for (const candidate of bases) {
+    if (candidate && candidate.trim().length > 0) {
+      return candidate.replace(/\/$/, "");
+    }
+  }
+
+  return "";
+}
+
 type AnalyzeOptions = {
   authToken?: string;
 };
@@ -81,6 +99,7 @@ export async function analyzeMessage(
   payload: AnalyzeRequest,
   options: AnalyzeOptions = {}
 ) {
+  const base = resolveApiBaseUrl();
   const base = resolveApiBase();
   const endpoint = `${base}${ANALYZE_PATH}`;
   const headers: Record<string, string> = {
@@ -105,6 +124,7 @@ export async function analyzeMessage(
 }
 
 export async function requestDevToken(userId: string) {
+  const base = resolveApiBaseUrl();
   const base = resolveApiBase();
   const endpoint = `${base}/api/dev-login`;
 
