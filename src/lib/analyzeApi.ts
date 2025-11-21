@@ -1,5 +1,5 @@
-import type { ApiClientOptions } from "./apiClient";
-import { apiClient } from "./apiClient";
+import { resolveApiBase as resolveApiBaseUrl } from "./apiBase";
+import { resolveApiBase } from "./apiBase";
 
 export type AnalyzeRequest = {
   message: string;
@@ -56,14 +56,26 @@ export type AnalyzeResponse = {
 
 const ANALYZE_PATH = "/api/analyze";
 
+export function resolveApiBase() {
+  const bases = [
+    process.env.NEXT_PUBLIC_API_BASE,
+    process.env.NEXT_PUBLIC_API_URL,
+    process.env.NEXT_PUBLIC_MOA_API_URL,
+    ""
+  ].filter((value): value is string => typeof value === "string");
+
+  for (const candidate of bases) {
+    if (candidate && candidate.trim().length > 0) {
+      return candidate.replace(/\/$/, "");
+    }
+  }
+
+  return "";
+}
+
 type AnalyzeOptions = {
   authToken?: string;
 };
-
-function buildHeaders(options: AnalyzeOptions): ApiClientOptions["headers"] {
-  if (!options.authToken) return undefined;
-  return { Authorization: `Bearer ${options.authToken}` };
-}
 
 function buildAnalyzeBody(payload: AnalyzeRequest): Record<string, unknown> {
   const userId = payload.userId || payload.user_id;
@@ -87,16 +99,45 @@ export async function analyzeMessage(
   payload: AnalyzeRequest,
   options: AnalyzeOptions = {}
 ) {
-  return apiClient<AnalyzeResponse>(ANALYZE_PATH, {
+  const base = resolveApiBaseUrl();
+  const base = resolveApiBase();
+  const endpoint = `${base}${ANALYZE_PATH}`;
+  const headers: Record<string, string> = {
+    "Content-Type": "application/json"
+  };
+
+  if (options.authToken) {
+    headers.Authorization = `Bearer ${options.authToken}`;
+  }
+  const res = await fetch(endpoint, {
     method: "POST",
-    headers: buildHeaders(options),
-    body: buildAnalyzeBody(payload)
+    headers,
+    body: JSON.stringify(buildAnalyzeBody(payload))
   });
+
+  if (!res.ok) {
+    const message = await res.text();
+    throw new Error(`Analyze request failed: ${res.status} ${message}`);
+  }
+
+  return (await res.json()) as AnalyzeResponse;
 }
 
 export async function requestDevToken(userId: string) {
-  return apiClient<{ token: string; userId: string; expiresAt?: string }>("/api/dev-login", {
+  const base = resolveApiBaseUrl();
+  const base = resolveApiBase();
+  const endpoint = `${base}/api/dev-login`;
+
+  const res = await fetch(endpoint, {
     method: "POST",
-    body: { userId }
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ userId })
   });
+
+  if (!res.ok) {
+    const message = await res.text();
+    throw new Error(`Dev login failed: ${res.status} ${message}`);
+  }
+
+  return (await res.json()) as { token: string; userId: string; expiresAt?: string };
 }
