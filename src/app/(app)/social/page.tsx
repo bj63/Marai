@@ -412,13 +412,20 @@ export default function SocialGraphPage() {
             <div className="input-row">
               <label className="file-input">
                 <input
+                  id="avatar-upload"
+                  name="avatarUpload"
                   type="file"
                   accept="image/*"
                   onChange={(e) => setAvatarFile(e.target.files?.[0] ?? null)}
                 />
                 <span>{avatarFile ? avatarFile.name : "Upload reference"}</span>
               </label>
-              <select value={avatarStyle} onChange={(e) => setAvatarStyle(e.target.value)}>
+              <select
+                id="avatar-style"
+                name="avatarStyle"
+                value={avatarStyle}
+                onChange={(e) => setAvatarStyle(e.target.value)}
+              >
                 <option value="dream">Dream</option>
                 <option value="cyberpunk">Cyberpunk</option>
                 <option value="studio">Studio</option>
