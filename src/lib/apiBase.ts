@@ -1,3 +1,6 @@
+const DEFAULT_REMOTE_API_BASE = "https://moaaiv3-production.up.railway.app";
+
+export function resolveApiBase(defaultBase = DEFAULT_REMOTE_API_BASE) {
 export function resolveApiBase(defaultBase = "") {
   const runtimeConfig = readRuntimeConfig();
 
@@ -15,12 +18,27 @@ export function resolveApiBase(defaultBase = "") {
   ].filter((value): value is string => typeof value === "string");
 
   for (const candidate of bases) {
-    if (candidate && candidate.trim().length > 0) {
-      return candidate.replace(/\/$/, "");
+    const normalized = normalizeBase(candidate);
+    if (normalized) {
+      return normalized;
     }
   }
 
   return "";
+}
+
+function normalizeBase(candidate?: string) {
+  if (!candidate || typeof candidate !== "string") return "";
+
+  const trimmed = candidate.trim();
+  if (!trimmed) return "";
+
+  const withoutTrailingSlash = trimmed.replace(/\/$/, "");
+
+  if (withoutTrailingSlash.startsWith("/")) return withoutTrailingSlash;
+  if (/^https?:\/\//i.test(withoutTrailingSlash)) return withoutTrailingSlash;
+
+  return `https://${withoutTrailingSlash}`;
 }
 
 type MaraiRuntimeConfig = {
