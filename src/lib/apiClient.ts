@@ -1,3 +1,5 @@
+import { resolveApiBase } from "./apiBase";
+
 export type ApiClientOptions = {
   method?: string;
   headers?: Record<string, string>;
@@ -16,7 +18,7 @@ export type NormalizedError = {
 
 const DEFAULT_RETRY = { attempts: 3, backoffMs: 250 };
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || process.env.API_BASE_URL || "http://localhost:3000";
+const API_BASE_URL = resolveApiBase();
 const API_KEY = process.env.NEXT_PUBLIC_API_KEY || process.env.API_KEY;
 
 async function sleep(ms: number) {
