@@ -1,6 +1,7 @@
 const DEFAULT_REMOTE_API_BASE = "https://moaaiv3-production.up.railway.app";
 
 export function resolveApiBase(defaultBase = DEFAULT_REMOTE_API_BASE) {
+export function resolveApiBase(defaultBase = "") {
   const runtimeConfig = readRuntimeConfig();
 
   const bases = [
