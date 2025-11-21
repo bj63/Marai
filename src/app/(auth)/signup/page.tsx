@@ -1,22 +1,56 @@
 "use client";
 
-import React, { FormEvent, useMemo, useState } from "react";
+import React, { FormEvent, useMemo, useState, useEffect } from "react";
 import { apiClient } from "../../../lib/apiClient";
 import { useSession } from "../../../providers/SessionProvider";
 import { useToasts } from "../../../components/ToastHub";
 
+type Step = "account" | "persona";
+
+type PersonaTraits = {
+  empathy: number;
+  creativity: number;
+  energy: number;
+  logic: number;
+};
+
 export default function SignUpPage() {
-  const { status, setStatus, refresh } = useSession();
+  const { status, setStatus, refresh, marai } = useSession();
   const { addToast } = useToasts();
+
+  const [step, setStep] = useState<Step>("account");
+
+  // Account State
   const [displayName, setDisplayName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [goal, setGoal] = useState("Share mood-driven stories");
+
+  // Persona State
+  const [personaName, setPersonaName] = useState("");
+  const [personaDescription, setPersonaDescription] = useState("");
+  const [traits, setTraits] = useState<PersonaTraits>({
+    empathy: 50,
+    creativity: 50,
+    energy: 50,
+    logic: 50,
+  });
+
   const [submitting, setSubmitting] = useState(false);
 
   const isBusy = useMemo(() => submitting || status === "loading", [submitting, status]);
 
-  const handleSubmit = async (event: FormEvent) => {
+  // Check for "zombie" account state (authenticated but no persona)
+  useEffect(() => {
+    if (status === "authenticated" && !marai) {
+      setStep("persona");
+      // If we have a display name in profile but no persona, pre-fill persona name
+      // (Assuming we can access profile from session, though not destructured above yet)
+      // We'll just rely on user input for now or simple logic.
+    }
+  }, [status, marai]);
+
+  const handleAccountSubmit = async (event: FormEvent) => {
     event.preventDefault();
     if (!displayName || !email || !password) {
       addToast({ title: "Add your details first", tone: "warning" });
@@ -24,13 +58,48 @@ export default function SignUpPage() {
     }
 
     setSubmitting(true);
-    setStatus("loading");
     addToast({ title: "Creating your MarAI account…", tone: "info" });
 
     try {
-      await apiClient("/api/auth/signup", {
+      await apiClient("/api/auth/register", {
         method: "POST",
         body: { displayName, email, password, goal },
+      });
+
+      addToast({ title: "Account created", description: "Now let's define your MarAI.", tone: "success" });
+      if (!personaName) setPersonaName(displayName);
+      setStep("persona");
+    } catch (error: any) {
+      // If error says "already exists" (status 409 typically), we might want to let them login or check state
+      // But for now just show error.
+      addToast({
+        title: "Sign up failed",
+        description: error?.message || "Check your API credentials in .env",
+        tone: "error",
+      });
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const handlePersonaSubmit = async (event: FormEvent) => {
+    event.preventDefault();
+    if (!personaName || !personaDescription) {
+      addToast({ title: "Please describe your persona", tone: "warning" });
+      return;
+    }
+
+    setSubmitting(true);
+    addToast({ title: "Birthing your MarAI…", tone: "info" });
+
+    try {
+      await apiClient("/api/marai/persona", {
+        method: "POST",
+        body: {
+          name: personaName,
+          description: personaDescription,
+          traits,
+        },
       });
 
       setStatus("authenticated");
@@ -38,15 +107,92 @@ export default function SignUpPage() {
       addToast({ title: "Welcome to MarAI", description: "Session hydrated", tone: "success" });
     } catch (error: any) {
       addToast({
-        title: "Sign up failed",
-        description: error?.message || "Check your API credentials in .env",
+        title: "Persona creation failed",
+        description: error?.message || "Try again",
         tone: "error",
       });
-      setStatus("error");
     } finally {
       setSubmitting(false);
     }
   };
+
+  const handleTraitChange = (trait: keyof PersonaTraits, value: string) => {
+    setTraits((prev) => ({ ...prev, [trait]: parseInt(value, 10) }));
+  };
+
+  if (step === "persona") {
+    return (
+      <section className="page auth">
+        <div className="page__header">
+          <div>
+            <p className="eyebrow">Step 2 of 2</p>
+            <h1>Define your MarAI</h1>
+            <p className="muted">Shape the personality of your AI companion.</p>
+          </div>
+        </div>
+
+        <div className="panel-card auth-card">
+          <form className="form-grid" onSubmit={handlePersonaSubmit}>
+            <div className="form-field">
+              <label htmlFor="personaName">Persona Name</label>
+              <input
+                id="personaName"
+                className="text-input"
+                value={personaName}
+                onChange={(e) => setPersonaName(e.target.value)}
+                placeholder="e.g. Kira"
+                required
+                disabled={isBusy}
+              />
+            </div>
+
+            <div className="form-field">
+              <label htmlFor="personaDescription">Description</label>
+              <textarea
+                id="personaDescription"
+                className="text-input"
+                value={personaDescription}
+                onChange={(e) => setPersonaDescription(e.target.value)}
+                placeholder="A witty, cyberpunk dreamer who loves neon rain..."
+                rows={3}
+                required
+                disabled={isBusy}
+              />
+            </div>
+
+            <div className="form-field">
+              <label>Personality Traits</label>
+              <div className="traits-grid">
+                {Object.entries(traits).map(([key, val]) => (
+                  <div key={key} className="trait-slider">
+                    <div className="trait-header">
+                      <span className="trait-name">{key}</span>
+                      <span>{val}%</span>
+                    </div>
+                    <input
+                      type="range"
+                      min="0"
+                      max="100"
+                      value={val}
+                      className="trait-input"
+                      onChange={(e) => handleTraitChange(key as keyof PersonaTraits, e.target.value)}
+                      disabled={isBusy}
+                    />
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="button-row">
+              <button type="submit" className="button" disabled={isBusy}>
+                {isBusy ? "Finalizing…" : "Complete Setup"}
+              </button>
+            </div>
+          </form>
+        </div>
+      </section>
+    );
+  }
 
   return (
     <section className="page auth">
@@ -59,7 +205,7 @@ export default function SignUpPage() {
       </div>
 
       <div className="panel-card auth-card">
-        <form className="form-grid" onSubmit={handleSubmit}>
+        <form className="form-grid" onSubmit={handleAccountSubmit}>
           <div className="form-field">
             <label htmlFor="displayName">Display name</label>
             <input

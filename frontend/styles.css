@@ -646,3 +646,21 @@ button:hover {
     grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
   }
 }
+
+.trait-slider {
+  margin-bottom: 1rem;
+}
+
+.trait-header {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 0.25rem;
+}
+
+.trait-name {
+  text-transform: capitalize;
+}
+
+.trait-input {
+  width: 100%;
+}
