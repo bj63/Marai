@@ -1,3 +1,5 @@
+import { resolveApiBase } from "./apiBase";
+
 export type AnalyzeRequest = {
   message: string;
   userId: string;
