@@ -1,0 +1,8 @@
+{
+  "name": "@supabase/supabase-js",
+  "version": "2.48.0",
+  "main": "index.js",
+  "types": "index.d.ts",
+  "description": "Stub Supabase client for offline development environments",
+  "license": "MIT"
+}
