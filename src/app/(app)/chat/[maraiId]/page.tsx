@@ -159,8 +159,9 @@ export default function ChatPage({ params }: { params: { maraiId: string } }) {
             setStreamError(null);
           }
         },
-      )
-      .subscribe();
+      );
+
+    channel.subscribe();
 
     return () => {
       supabase.removeChannel(channel);
