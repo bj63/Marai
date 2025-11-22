@@ -31,8 +31,10 @@ uvicorn services.adaptive_memory_service:app --host 0.0.0.0 --port 8000
 Create or update `.env.local` in this repo:
 - `NEXT_PUBLIC_SUPABASE_URL=https://fjefpxwetudpcxarlokp.supabase.co`
 - `NEXT_PUBLIC_SUPABASE_ANON_KEY=<anon_key>`
-- `NEXT_PUBLIC_API_BASE=http://localhost:8000` (FastAPI adaptive memory service)
-- `NEXT_PUBLIC_MOA_API_URL=http://localhost:8000` (use the same base unless services are split)
+- `NEXT_PUBLIC_API_BASE=https://marai-production.up.railway.app` (deployed FastAPI adaptive memory service)
+- `NEXT_PUBLIC_MOA_API_URL=https://marai-production.up.railway.app` (use the same base unless services are split)
+
+For local backend development, override the API base URLs with your localhost port (for example, `http://localhost:8000`).
 
 If the frontend still references legacy Flask endpoints, set `NEXT_PUBLIC_API_URL` to that service; otherwise point everything at the FastAPI adaptive memory base.
 
