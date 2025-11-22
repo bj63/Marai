@@ -1,13 +1,13 @@
 "use client";
 
-"use client";
-
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Image from "next/image";
 import { RouteGuard } from "../../../../components/RouteGuard";
 import { useToasts } from "../../../../components/ToastHub";
 import { useSession } from "../../../../providers/SessionProvider";
 import { apiClient } from "../../../../lib/apiClient";
+import { supabase } from "../../../../lib/supabaseClient";
+import { Tables } from "../../../../lib/supabaseTypes";
 
 const TYPING_PLACEHOLDER = "…";
 
@@ -64,6 +64,7 @@ export default function ChatPage({ params }: { params: { maraiId: string } }) {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState("");
   const [typing, setTyping] = useState(false);
+  const [awaitingReply, setAwaitingReply] = useState(false);
   const [streamError, setStreamError] = useState<string | null>(null);
   const [moodDigest, setMoodDigest] = useState<MoodDigest | null>(null);
   const [sceneJob, setSceneJob] = useState<SceneJob | null>(null);
@@ -112,6 +113,61 @@ export default function ChatPage({ params }: { params: { maraiId: string } }) {
   }, [params.maraiId, profile?.id]);
 
   useEffect(() => {
+    const channel = supabase
+      .channel(`chat_room_${params.maraiId}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "INSERT",
+          schema: "public",
+          table: "messages",
+          filter: `conversation_id=eq.${params.maraiId}`,
+        },
+        (payload) => {
+          const row = payload.new as Tables<"messages">;
+          const role: ChatMessage["role"] = row.sender_id === profile?.id ? "user" : "assistant";
+
+          setMessages((current) => {
+            const existingIndex = current.findIndex((msg) => msg.id === row.id);
+            if (existingIndex !== -1) return current;
+
+            const streamingIndex = current.findIndex(
+              (msg) => msg.role === "assistant" && msg.status === "streaming",
+            );
+
+            if (streamingIndex !== -1) {
+              const updated = [...current];
+              updated[streamingIndex] = {
+                ...current[streamingIndex],
+                id: row.id,
+                content: row.body,
+                status: "complete",
+              };
+              return updated;
+            }
+
+            return [
+              ...current,
+              { id: row.id, role, content: row.body, createdAt: row.created_at, status: "complete" },
+            ];
+          });
+
+          if (role === "assistant") {
+            pendingAssistantId.current = null;
+            setTyping(false);
+            setAwaitingReply(false);
+            setStreamError(null);
+          }
+        },
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [params.maraiId, profile?.id]);
+
+  useEffect(() => {
     if (typeof window === "undefined") return;
     window.localStorage.setItem(storageKey, JSON.stringify(messages));
   }, [messages, storageKey]);
@@ -153,6 +209,7 @@ export default function ChatPage({ params }: { params: { maraiId: string } }) {
     );
     pendingAssistantId.current = null;
     setTyping(false);
+    setAwaitingReply(false);
   }, []);
 
   const startStream = useCallback(
@@ -245,6 +302,7 @@ export default function ChatPage({ params }: { params: { maraiId: string } }) {
     setMessages((current) => [...current, userMessage, assistantMessage]);
     setInput("");
     setTyping(true);
+    setAwaitingReply(true);
     setStreamError(null);
 
     try {
@@ -256,6 +314,7 @@ export default function ChatPage({ params }: { params: { maraiId: string } }) {
     } catch (error: any) {
       setStreamError("Unable to start stream");
       finalizeAssistant(assistantId, error?.message || "Failed to send message");
+      setAwaitingReply(false);
     }
   }, [finalizeAssistant, input, params.maraiId, startStream]);
 
@@ -275,6 +334,7 @@ export default function ChatPage({ params }: { params: { maraiId: string } }) {
       ),
     );
     setStreamError(null);
+    setAwaitingReply(true);
     startStream(assistantId);
     addToast({ title: "Retrying chat stream", tone: "info" });
   }, [addToast, messages, startStream]);
@@ -325,6 +385,7 @@ export default function ChatPage({ params }: { params: { maraiId: string } }) {
   };
 
   const isStreaming = typing && !streamError;
+  const isThinking = awaitingReply || isStreaming;
 
   return (
     <RouteGuard section="app">
@@ -357,7 +418,7 @@ export default function ChatPage({ params }: { params: { maraiId: string } }) {
                 {msg.status === "error" && <p className="bubble-error">{msg.error}</p>}
               </article>
             ))}
-            {isStreaming && (
+            {isThinking && (
               <div className="typing-row">
                 <div className="dot" />
                 <div className="dot" />

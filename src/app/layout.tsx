@@ -4,6 +4,7 @@ import { SessionProvider } from "../providers/SessionProvider";
 import { ToastProvider, ToastViewport } from "../components/ToastHub";
 import { TopBar } from "../components/TopBar";
 import { NavRail } from "../components/NavRail";
+import { NeuralLink } from "../components/NeuralLink";
 import "../styles/globals.css";
 
 export const metadata = {
@@ -32,6 +33,7 @@ export default function RootLayout({ children }: RootLayoutProps) {
         <ThemeProvider>
           <SessionProvider>
             <ToastProvider>
+              <NeuralLink />
               <div className="layout-shell">
                 <TopBar navItems={APP_NAV} />
                 <div className="layout-content">
