@@ -1,6 +1,3 @@
-// Note: @supabase/supabase-js cannot be fetched in this environment; install it in
-// your runtime before importing this client.
-// @ts-ignore
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import { Database } from "./supabaseTypes";
 

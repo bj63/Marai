@@ -27,8 +27,9 @@ export function NeuralLink() {
             tone: "info",
           });
         },
-      )
-      .subscribe();
+      );
+
+    channel.subscribe();
 
     return () => {
       if (pulseTimeout) clearTimeout(pulseTimeout);
