@@ -13,6 +13,13 @@ export type MediaAsset = {
   kind?: "image" | "video";
 };
 
+const MOOD_STYLES: Record<string, string> = {
+  angry: "mood-angry",
+  contemplative: "mood-contemplative",
+  electric: "mood-electric",
+  void: "mood-void",
+};
+
 export type FeedPost = {
   id: string;
   type: "autopost" | "dream" | "dialogue" | "ad" | "avatar_update" | "product_drop";
@@ -30,6 +37,7 @@ export type FeedPost = {
   dialogue?: { speaker: string; text: string }[];
   ad?: { brand: string; ctaLabel?: string; ctaUrl?: string; body?: string };
   mood?: string;
+  color?: string;
   avatarPreview?: string;
   product?: {
     title: string;
@@ -38,6 +46,7 @@ export type FeedPost = {
     features?: string;
     sellerType?: "common" | "brand";
   };
+  metadata?: { visual_seed?: string; model?: string; [key: string]: unknown };
 };
 
 type CardProps = { post: FeedPost; onAction: (postId: string, action: FeedAction) => void };
@@ -83,8 +92,19 @@ const MediaGallery = React.memo(function MediaGallery({ media }: { media?: Media
 });
 
 function PostShell({ post, children }: { post: FeedPost; children: React.ReactNode }) {
+  const moodKey = post.mood?.toLowerCase?.() ?? "";
+  const moodClass = MOOD_STYLES[moodKey] ?? "mood-neutral";
+  const dynamicStyle = post.color
+    ? { borderColor: post.color, boxShadow: `0 0 10px ${post.color}40` }
+    : undefined;
+
   return (
-    <article className="feed-card" role="article" aria-label={`${post.type} post from ${post.author}`}>
+    <article
+      className={`feed-card ${moodClass}`}
+      role="article"
+      aria-label={`${post.type} post from ${post.author}`}
+      style={dynamicStyle}
+    >
       <header className="feed-card__header">
         <div className="avatar-ring" aria-hidden="true" />
         <div className="feed-card__meta">
@@ -92,9 +112,21 @@ function PostShell({ post, children }: { post: FeedPost; children: React.ReactNo
           <strong>{post.author}</strong>
           {post.createdAt && <span className="eyebrow">{post.createdAt}</span>}
         </div>
-        <span className="badge">{post.type.replace("_", " ")}</span>
+        <div className="badge-stack">
+          <span className="badge">{post.type.replace("_", " ")}</span>
+          {post.mood && <span className="badge badge--mood">{post.mood}</span>}
+        </div>
       </header>
       {children}
+      {post.metadata?.visual_seed && (
+        <div className="feed-meta">
+          <span className="eyebrow">Dream seed</span>
+          <p className="eyebrow">
+            SEED: {post.metadata.visual_seed}
+            {post.metadata.model ? ` // MODEL: ${post.metadata.model}` : ""}
+          </p>
+        </div>
+      )}
     </article>
   );
 }
