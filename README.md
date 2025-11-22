@@ -24,6 +24,7 @@ MarAI is the everyday copilot that remembers your context, narrates your vibe, a
 - `src/lib` – API client, session bootstrap, and helpers.
 - `frontend/` – Legacy static prototype, kept for reference.
 - `docs/` – Ops notes and implementation plans.
+- `docs/marai-moa-integration.md` – Steps to wire this frontend to the MOA_AI_V3 backend and Supabase project.
 
 ## Operating the Mood Ring
 The `ThemeProvider` polls `/api/marai/state/current` through `apiClient` to pull accent colors and motion speed directly from the backend. It updates CSS variables every few seconds while falling back gracefully if offline. When paired with the app shell, this keeps the interface and your personal "soul" in lockstep.
