@@ -1,3 +1,4 @@
+# Trigger rebuild
 # Build and run the MarAI Next.js application on Railway
 
 FROM node:20-alpine AS deps
