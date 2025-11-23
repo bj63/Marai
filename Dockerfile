@@ -23,12 +23,14 @@ FROM node:20-alpine AS runner
 WORKDIR /app
 ENV NODE_ENV=production
 
-# Keep the public Supabase values available in the runtime container as well.
+# Carry the public Supabase values into the runtime image as well. While
+# the build step embeds these into the client bundle, keeping them here
+# ensures any server-side usage also sees the expected values when
+# Railway passes the build args.
 ARG NEXT_PUBLIC_SUPABASE_URL
 ARG NEXT_PUBLIC_SUPABASE_ANON_KEY
 ENV NEXT_PUBLIC_SUPABASE_URL=$NEXT_PUBLIC_SUPABASE_URL
 ENV NEXT_PUBLIC_SUPABASE_ANON_KEY=$NEXT_PUBLIC_SUPABASE_ANON_KEY
-
 # Next standalone output includes server.js
 COPY --from=builder /app/public ./public
 COPY --from=builder /app/.next/standalone ./
