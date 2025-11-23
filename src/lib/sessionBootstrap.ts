@@ -1,4 +1,4 @@
-import { apiClient } from "./apiClient";
+import { supabase } from "./supabaseClient";
 
 export type SessionSnapshot = {
   authenticated: boolean;
@@ -30,17 +30,59 @@ const defaultSnapshot: SessionSnapshot = {
 
 export async function bootstrapSession(): Promise<SessionSnapshot> {
   try {
-    const response = await apiClient<SessionSnapshot>("/api/session/bootstrap", {
-      method: "GET",
-      retry: { attempts: 2 },
-    });
+    // Get current Supabase session
+    const {
+      data: { session },
+    } = await supabase.auth.getSession();
+
+    if (!session?.user) {
+      return defaultSnapshot;
+    }
+
+    // Fetch user profile from Supabase
+    const { data: profile } = await supabase
+      .from("mirai_profile")
+      .select("*")
+      .eq("user_id", session.user.id)
+      .single();
+
+    // Fetch personality traits
+    const { data: personality } = await supabase
+      .from("personality")
+      .select("*")
+      .eq("user_id", session.user.id)
+      .single();
+
     return {
-      authenticated: Boolean(response.authenticated),
-      profile: response.profile ?? defaultSnapshot.profile,
-      themes: response.themes ?? defaultSnapshot.themes,
-      marai: response.marai ?? defaultSnapshot.marai,
+      authenticated: true,
+      profile: profile
+        ? {
+            id: profile.user_id,
+            username: profile.name || "user",
+            displayName: profile.name || "Anonymous",
+          }
+        : null,
+      themes: {
+        current: "dark",
+        available: ["dark", "pastel", "cyberpunk"],
+      },
+      marai: personality
+        ? {
+            id: session.user.id,
+            persona: profile?.name || "MarAI",
+            traits: {
+              empathy: parseFloat(personality.empathy),
+              creativity: parseFloat(personality.creativity),
+              energy: parseFloat(personality.energy),
+              confidence: parseFloat(personality.confidence),
+              humor: parseFloat(personality.humor),
+              curiosity: parseFloat(personality.curiosity),
+            },
+          }
+        : null,
     };
   } catch (error) {
+    console.error("Bootstrap error:", error);
     return defaultSnapshot;
   }
 }

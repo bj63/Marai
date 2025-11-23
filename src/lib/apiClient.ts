@@ -1,5 +1,7 @@
 import { resolveApiBase } from "./apiBase";
 
+const ENABLE_DIRECT_SUPABASE = true; // Toggle this if backend is unavailable
+
 export type ApiClientOptions = {
   method?: string;
   headers?: Record<string, string>;

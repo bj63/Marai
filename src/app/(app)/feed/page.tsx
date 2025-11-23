@@ -4,6 +4,8 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { RouteGuard } from "../../../components/RouteGuard";
 import { useToasts } from "../../../components/ToastHub";
 import { apiClient } from "../../../lib/apiClient";
+import { mapDbPostToFeedPost } from "../../../lib/feedMapper";
+import { supabase } from "../../../lib/supabaseClient";
 import { VirtualFeedList } from "../../../components/feed/VirtualFeedList";
 import {
   AdCard,
@@ -16,11 +18,6 @@ import {
   FeedPost,
   FeedSkeleton,
 } from "../../../components/feed/FeedCards";
-
-type FeedResponse = {
-  items: FeedPost[];
-  nextCursor?: string;
-};
 
 const FALLBACK_FEED: FeedPost[] = [
   {
@@ -109,32 +106,33 @@ export default function FeedPage() {
     postsRef.current = posts;
   }, [posts]);
 
-  const fetchFeed = useCallback(
-    async (nextCursor?: string, append = false) => {
-      setError(null);
-      append ? setLoadingMore(true) : setLoading(true);
-      try {
-        const response = await apiClient<FeedResponse>(`/api/feed${nextCursor ? `?cursor=${nextCursor}` : ""}`, {
-          method: "GET",
-        });
-        const items = response?.items ?? [];
-        setPosts((current) => (append ? [...current, ...items] : items));
-        setCursor(response?.nextCursor ?? null);
-        setHasMore(Boolean(response?.nextCursor));
-      } catch (err: any) {
-        const message = err?.message ?? "Unable to load feed";
-        setError(message);
-        if (!append && !postsRef.current.length) {
-          setPosts(FALLBACK_FEED);
-          setHasMore(false);
-        }
-      } finally {
-        setLoading(false);
-        setLoadingMore(false);
+  const fetchFeed = useCallback(async (append = false) => {
+    setError(null);
+    append ? setLoadingMore(true) : setLoading(true);
+    try {
+      const { data, error } = await supabase
+        .from("feed_posts")
+        .select("*")
+        .order("created_at", { ascending: false })
+        .limit(20);
+
+      if (error) throw error;
+
+      const mappedPosts = data?.map(mapDbPostToFeedPost) || [];
+      setPosts((current) => (append ? [...current, ...mappedPosts] : mappedPosts));
+      setCursor(null);
+      setHasMore(false);
+    } catch (err: any) {
+      setError(err.message);
+      if (!append && !postsRef.current.length) {
+        setPosts(FALLBACK_FEED);
+        setHasMore(false);
       }
-    },
-    []
-  );
+    } finally {
+      setLoading(false);
+      setLoadingMore(false);
+    }
+  }, []);
 
   useEffect(() => {
     fetchFeed();
@@ -216,7 +214,7 @@ export default function FeedPage() {
             <p>Virtualized stream for MarAI autoposts, dreams, dialogues, and updates.</p>
           </div>
           <div className="cta-row">
-            <button className="button ghost" onClick={() => fetchFeed(undefined, false)} disabled={loading}>
+            <button className="button ghost" onClick={() => fetchFeed(false)} disabled={loading}>
               Refresh
             </button>
           </div>
@@ -225,7 +223,7 @@ export default function FeedPage() {
         {error && (
           <div className="banner banner--error">
             <p>{error}</p>
-            <button className="button ghost" onClick={() => fetchFeed(undefined, false)}>
+            <button className="button ghost" onClick={() => fetchFeed(false)}>
               Retry
             </button>
           </div>
@@ -242,7 +240,7 @@ export default function FeedPage() {
         {!loading && !hasPosts && !error && (
           <div className="empty-state">
             <p>No posts yet. Try refreshing to fetch the latest feed.</p>
-            <button className="button" onClick={() => fetchFeed(undefined, false)}>
+            <button className="button" onClick={() => fetchFeed(false)}>
               Load feed
             </button>
           </div>
@@ -252,7 +250,7 @@ export default function FeedPage() {
           <VirtualFeedList
             items={posts}
             renderItem={renderPost}
-            onEndReached={hasMore ? () => fetchFeed(cursor ?? undefined, true) : undefined}
+            onEndReached={hasMore ? () => fetchFeed(true) : undefined}
           />
         )}
 
