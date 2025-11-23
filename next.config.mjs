@@ -1,4 +1,5 @@
 /** @type {import('next').NextConfig} */
+// Required for the Docker image to bundle a self-contained server build
 const nextConfig = {
   output: 'standalone',
   experimental: {
