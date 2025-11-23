@@ -10,14 +10,15 @@ ENV NODE_ENV=production
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 
-# Declare build arguments
+# 1. Tell Docker to expect these arguments from Railway
 ARG NEXT_PUBLIC_SUPABASE_URL
 ARG NEXT_PUBLIC_SUPABASE_ANON_KEY
 
-# Map ARGs to ENVs for build time
+# 2. Set them as environment variables so Next.js can read them
 ENV NEXT_PUBLIC_SUPABASE_URL=$NEXT_PUBLIC_SUPABASE_URL
 ENV NEXT_PUBLIC_SUPABASE_ANON_KEY=$NEXT_PUBLIC_SUPABASE_ANON_KEY
 
+# Now run the build. Next.js will now see the values!
 RUN npm run build
 
 FROM node:20-alpine AS runner
